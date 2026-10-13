@@ -571,6 +571,27 @@ button{font-family:inherit}
 
 .c-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sumGrid{padding-top:22px}
+
+/* v3.1: eladás + valódi képek */
+.headRight{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.sellAll,.btnGhost.sell{
+  padding:7px 14px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;
+  color:#ffe27a;background:rgba(255,226,122,.08);border:1px solid rgba(255,226,122,.55);
+  box-shadow:0 0 12px rgba(255,226,122,.18);transition:.15s;
+}
+.sellAll:hover:not(:disabled),.btnGhost.sell:hover:not(:disabled){background:rgba(255,226,122,.18);color:#fff}
+.sellAll:disabled,.btnGhost.sell:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+.sellSec{margin-bottom:12px}
+.sellBtnS{
+  padding:9px 18px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;
+  color:#ffe27a;background:rgba(255,226,122,.08);border:1px solid rgba(255,226,122,.6);
+}
+.sellBtnS:hover{background:rgba(255,226,122,.2);color:#fff}
+.dupCap{color:#ffe27a}
+.c-art .realImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
+.c-art .stageTag{z-index:3}
+.card.locked .c-art .realImg{filter:brightness(0) opacity(.75)}
+.card.locked .c-art::after{z-index:2}
 </style>
 </head>
 <body>
@@ -602,7 +623,7 @@ button{font-family:inherit}
         <span><i class="dot ultra"></i>Ultra Rare 12%</span>
         <span><i class="dot secret"></i>Secret Rare 3%</span>
       </div>
-      <div class="evoNote">Minden csomagnak <b>saját kártyakészlete</b> van: két külön csomagból sosem húzhatsz ugyanolyan lényt. Minden csomagban garantált egy <b>Rare+</b> találat. <b>⚡ Evolúció:</b> az alapkártyából <b>3 példány</b> kell az EVOLVE gombhoz.</div>
+      <div class="evoNote">Minden csomagnak <b>saját kártyakészlete</b> van: két külön csomagból sosem húzhatsz ugyanolyan lényt. Minden csomagban garantált egy <b>Rare+</b> találat. A lény <b>egyszer termel</b>; a <b>duplikátumokat eladhatod</b> RP-ért (💰 az albumnál). <b>⚡ Evolúció:</b> az alapkártyából <b>3 példány</b> kell az EVOLVE gombhoz.</div>
     </div>
 
     <div class="panel tools">
@@ -615,7 +636,10 @@ button{font-family:inherit}
   <main class="main">
     <div class="albumHead">
       <h2>📖 Kriptid Album</h2>
-      <div class="sub">Kinyitva: <b id="foundCount">0</b> / <span id="totalCount">0</span></div>
+      <div class="headRight">
+        <button id="sellAllBtn" class="sellAll" type="button">💰 Duplikátumok eladása</button>
+        <div class="sub">Kinyitva: <b id="foundCount">0</b> / <span id="totalCount">0</span></div>
+      </div>
     </div>
     <div class="filters" id="filters"></div>
     <div class="binderWrap">
@@ -645,6 +669,7 @@ button{font-family:inherit}
   <div class="resultSub" id="resultSub"></div>
   <div class="btnRow">
     <button id="skipBtn" class="btnGhost" type="button">Összes felfedése ⏭</button>
+    <button id="sellBtn" class="btnGhost sell" type="button" style="display:none">💰 Duplikátumok eladása</button>
     <button id="nextBtn" class="btnGreen" type="button" disabled>Következő ▶</button>
     <button id="closeBtn" class="btnGreen" type="button" style="display:none">Tovább</button>
   </div>
@@ -685,6 +710,12 @@ const CUSTOM_SVG = {"bigfoot": "<svg viewBox=\"0 0 100 100\" preserveAspectRatio
 
 /* ================= KONSTANSOK ================= */
 const EVO_COST = 3;
+
+/* ===== BEÁLLÍTÁSOK – itt hangolhatod az egyensúlyt ===== */
+const CLICK_RP = 1;                                   // RP egy kattintásra
+const SELL_MULT = {common:.25, rare:.6, ultra:1.5, secret:4};   // eladási ár = egy lap csomagbeli ára × szorzó
+const IMG_DIR = '';      // pl. 'img/' → minden kártya megpróbálja betölteni: img/<kártya-id>.jpg
+const IMAGE_MAP = {};    // vagy egyenként: {nessie:'kepek/nessie.png', bigfoot:'https://…/kep.jpg'}
 const SAVE_KEY = 'cryptidExplorerTCG_v3';
 const OLD_KEYS = ['cryptidExplorerTCG_v2', 'cryptidExplorerTCG_v1'];
 
@@ -716,7 +747,8 @@ const PACKS = [
   {id:'urban',   name:'Városi Legendák',   icon:'🏙️', price:350,  count:5, guarantee:'rare', c1:'#c04aa8', c2:'#2a1030', desc:'Suttogott történetek és internetes rémek.'},
   {id:'sea',     name:'Mélység & Ég',      icon:'🌊',  price:500,  count:5, guarantee:'rare', c1:'#1fb3b0', c2:'#0b2f55', desc:'Tavi szörnyek és égi árnyak.'},
   {id:'myth',    name:'Mitológiai Lények', icon:'🐉',  price:750,  count:6, guarantee:'ultra',c1:'#d99a2b', c2:'#4a1f0b', desc:'Ősi istenek szörnyei – garantált Ultra Rare+!'},
-  {id:'anomaly', name:'Anomália Dosszié',  icon:'🛸',  price:1000, count:6, guarantee:'ultra',c1:'#f0742e', c2:'#2a0f3a', desc:'Megmagyarázhatatlan jelenségek – garantált Ultra Rare+!'}
+  {id:'anomaly', name:'Anomália Dosszié',  icon:'🛸',  price:1000, count:6, guarantee:'ultra',c1:'#f0742e', c2:'#2a0f3a', desc:'Megmagyarázhatatlan jelenségek – garantált Ultra Rare+!'},
+  {id:'cosmic',  name:'Lovecraft Rémei',   icon:'🐙',  price:1250, count:6, guarantee:'ultra',c1:'#2fbf8a', c2:'#14052b', desc:'Kozmikus iszonyat a mélyből és a csillagok közül – garantált Ultra Rare+!'}
 ];
 const PACK_BY_ID = Object.fromEntries(PACKS.map(p => [p.id, p]));
 
@@ -732,10 +764,10 @@ function slug(name){
 }
 /* Passzív termelés (RP/mp) – szándékosan kicsi értékek */
 const RPS_TABLE = {
-  common:[0.1, 0.2],
-  rare:  [1, 1.5, 2],
-  ultra: [4, 5, 6],
-  secret:[10, 12, 15]
+  common:[0.05, 0.1],
+  rare:  [0.3, 0.5, 0.7],
+  ultra: [1.5, 2, 2.5],
+  secret:[4, 5, 6]
 };
 
 const DB = [];
@@ -746,8 +778,10 @@ function addPack(packId, rows){
     const rarity = RLET[rl];
     const tbl = RPS_TABLE[rarity];
     const id = ex.id || slug(name);
+    const orig = (typeof ORIG !== 'undefined' && ORIG[name]) || name;
+    const cleanSub = sub.startsWith(orig + ' • ') ? sub.slice(orig.length + 3) : sub;   // ne ismételjük az eredeti nevet
     DB.push({
-      id, name, sub, type, rarity, art, fact, pack: packId,
+      id, name, orig, sub: cleanSub, type, rarity, art, fact, pack: packId,
       rps: ex.rps != null ? ex.rps : tbl[hash(name) % tbl.length],
       evolvesTo: ex.evolvesTo || null,
       evoOnly: !!ex.evoOnly
@@ -755,13 +789,42 @@ function addPack(packId, rows){
   });
 }
 
+/* Eredeti (idegen nyelvű) nevek: honosított név → eredeti név.
+   A kártyán az eredeti név a cím, alatta a magyar (honosított) név látszik. */
+const ORIG = {
+  'Nagylábú':'Bigfoot', 'Molyember':'Mothman', 'Csupakabra':'Chupacabra', 'Nessie':'Loch Ness Monster',
+  'Jersey Ördög':'Jersey Devil', 'Bray Road-i Fenevad':'Beast of Bray Road', 'Fouke-i Szörny':'Fouke Monster',
+  'Fehér Hölgy':'White Lady', 'Fej Nélküli Lovas':'Headless Horseman', 'Fantom Stoppos':'Phantom Hitchhiker',
+  'Megszállt Baba':'Haunted Doll', 'Árnyék a Szekrényben':'Closet Shadow', 'Fekete Szemű Gyerekek':'Black-Eyed Children',
+  'Fekete Kutya':'Black Shuck', 'Véres Mária':'Bloody Mary', 'Repülő Holland':'Flying Dutchman', 'Kaszás':'Grim Reaper',
+  'Csatornakrokodil':'Sewer Alligator', 'Horgoskezű':'The Hookman', 'Zsákos Ember':'Bagman', 'Nyuszi Ember':'Bunny Man',
+  'Gonosz Bohóc':'Phantom Clown', 'Pörgőrugós Jack':'Spring-Heeled Jack', 'Mattoon-i Gázfantom':'Mad Gasser of Mattoon',
+  'Slenderman':'Slender Man', 'Backrooms Lakó':'Backrooms Entity', 'Kalapos Árnyékember':'Hat Man', 'Rake':'The Rake',
+  'Sellő':'Mermaid', 'Tengeri Kígyó':'Sea Serpent', 'Harpia':'Harpy', 'Hippokampusz':'Hippocampus', 'Leviatán':'Leviathan',
+  'Kentaur':'Centaur', 'Minotaurusz':'Minotaur', 'Vérfarkas':'Werewolf', 'Szfinx':'Sphinx', 'Medúza':'Medusa',
+  'Főnix':'Phoenix', 'Hidra':'Hydra', 'Kerberosz':'Cerberus', 'Szürke Ember':'Grey Alien', 'Gömbvillám':'Ball Lightning',
+  'Marfa-fények':'Marfa Lights', 'Hessdalen-fény':'Hessdalen Lights', 'Taos-zúgás':'Taos Hum',
+  'Időutazó Turista':'Chaplin Time Traveler', 'Philadelphia-kísérlet':'Philadelphia Experiment', 'Wow! Jel':'Wow! Signal',
+  'Mongol Halálféreg':'Mongolian Death Worm', 'Fekete Ruhás Férfiak':'Men in Black',
+  'Woolpit Zöld Gyerekei':'Green Children of Woolpit', 'Utahi Monolit':'Utah Monolith', 'Tunguszka-esemény':'Tunguska Event',
+  'Bermuda-háromszög':'Bermuda Triangle', 'Voynich-kézirat':'Voynich Manuscript',
+  'Lidércfény':"Will-o'-the-Wisp", 'Mumus':'Boogeyman',
+  // Lovecraft
+  'Mélységi Lény':'Deep One', 'Hullaevő':'Ghoul', 'Barna Jenkin':'Brown Jenkin', 'Éji Szörny':'Night-gaunt',
+  'Yuggothi Gomba':'Mi-Go', 'Ősöreg':'Elder Thing', 'Yith Nagy Faja':'Great Race of Yith', 'Csillagvámpír':'Star Vampire',
+  'Tindalosi Kopó':'Hound of Tindalos', 'Az Űrből Jött Szín':'The Colour Out of Space', 'A Halemberek Istene':'Dagon',
+  'Az Élő Láng':'Cthugha', 'A Kígyók Atyja':'Yig', 'Dunwichi Borzalom':'The Dunwich Horror', 'A Nagy Álmodó':'Cthulhu',
+  'A Kúszó Káosz':'Nyarlathotep', 'A Vak Őrült Isten':'Azathoth', 'A Kapu és a Kulcs':'Yog-Sothoth',
+  'Az Erdő Fekete Kecskéje':'Shub-Niggurath'
+};
+
 addPack('hungary', [
   ['Hany Istók', 'Hanság lápi gyermeke', 'water', 'C', 'hum',
-   'A Hanság mocsaraiban nevelkedett lápi gyermek, aki tökéletesen tudott úszni és lélegezni a víz alatt.', {id:'hanyistok', rps:0.2}],
+   'A Hanság mocsaraiban nevelkedett lápi gyermek, aki tökéletesen tudott úszni és lélegezni a víz alatt.', {id:'hanyistok', rps:0.1}],
   ['Fanyüvő Kölyök', 'A Fanyűvő alapformája', 'forest', 'C', 'beast',
-   'A Fanyűvő alapformája. Még csak a csemetéket rágcsálja, de a fák már most idegesen figyelik.', {id:'fanyuvokolyok', rps:0.2, evolvesTo:'fanyuvo'}],
+   'A Fanyűvő alapformája. Még csak a csemetéket rágcsálja, de a fák már most idegesen figyelik.', {id:'fanyuvokolyok', rps:0.1, evolvesTo:'fanyuvo'}],
   ['Lidércfény', 'Magyar népi hiedelem', 'ghost', 'C', 'wisp',
-   'A mocsarak apró lángja, amely a hiedelem szerint a vándorokat csalogatja a mélybe. Azóta mindenki inkább a térképet követi.', {id:'lidercfeny', rps:0.1, evolvesTo:'liderc'}],
+   'A mocsarak apró lángja, amely a hiedelem szerint a vándorokat csalogatja a mélybe. Azóta mindenki inkább a térképet követi.', {id:'lidercfeny', rps:0.05, evolvesTo:'liderc'}],
   ['Mumus', 'Közös gyerekijesztő', 'ghost', 'C', 'hood',
    'Az ágy alatt lakik, a szekrényben alszik. Ősi, bevált védekezés ellene: a takarót a fejre húzni.'],
   ['Vízi Ember', 'Folyók mélyének lakója', 'water', 'C', 'hum',
@@ -786,14 +849,14 @@ addPack('hungary', [
    'A magyar mesék fája, amely a felhők fölé nő, ágain a Nap és a Hold lakik. A legmagasabb kutatótorony a Földön.'],
   /* csak evolúcióval szerezhető */
   ['Mátranováki Fanyűvő', 'Magyar kriptid', 'forest', 'R', 'beast',
-   'A Mátrában észlelt, fura testalkatú lény, aki állítólag fák kérgét kaparássza éjszaka.', {id:'fanyuvo', rps:3, evoOnly:true}],
+   'A Mátrában észlelt, fura testalkatú lény, aki állítólag fák kérgét kaparássza éjszaka.', {id:'fanyuvo', rps:1.5, evoOnly:true}],
   ['Lidérc', 'Magyar népi hiedelem', 'ghost', 'R', 'ghost',
-   'A lidércfény kifejlett alakja: a hiedelem szerint a ház kéményén át jár be, és kincset hoz – ha meg tudod tartani. Ritkán sikerül.', {id:'liderc', rps:3, evoOnly:true}]
+   'A lidércfény kifejlett alakja: a hiedelem szerint a ház kéményén át jár be, és kincset hoz – ha meg tudod tartani. Ritkán sikerül.', {id:'liderc', rps:1.5, evoOnly:true}]
 ]);
 
 addPack('forest', [
   ['Nagylábú', 'Bigfoot • Észak-Amerika', 'forest', 'C', 'hairy',
-   'A lábnyoma 40 cm hosszú, így a cipőboltok azóta is hiába keresik rá a méretet.', {id:'bigfoot', rps:0.2}],
+   'A lábnyoma 40 cm hosszú, így a cipőboltok azóta is hiába keresik rá a méretet.', {id:'bigfoot', rps:0.1}],
   ['Skunk Ape', 'Florida mocsarai', 'forest', 'C', 'hairy',
    'A floridai nagylábú rokon, akit a szaga előz meg. A szemtanúk szerint büdös zokni és állatkert keveréke.'],
   ['Yowie', 'Ausztrál bozótvidék', 'earth', 'C', 'hairy',
@@ -819,7 +882,7 @@ addPack('forest', [
   ['Yeti', 'Himalája', 'earth', 'U', 'hairy',
    'A Himalája hóembere. 1951-ben egy hegymászó lábnyomot fényképezett a hóban, azóta a világ kutatja a másik cipőjét.'],
   ['Csupakabra', 'Chupacabra • Latin-Amerika', 'mystic', 'S', 'beast',
-   'A neve szó szerint „kecskeszívó”. Pedig a legtöbbször csak a kutyaeledelt lopkodja.', {id:'chupacabra', rps:12}]
+   'A neve szó szerint „kecskeszívó”. Pedig a legtöbbször csak a kutyaeledelt lopkodja.', {id:'chupacabra', rps:6}]
 ]);
 
 addPack('ghost', [
@@ -902,7 +965,7 @@ addPack('sea', [
   ['Hippokampusz', 'Görög mitológia', 'water', 'C', 'beast',
    'Félig ló, félig hal: Poszeidón kocsiját húzza. A csikóhalak a mai napig büszkék a rokonságra.'],
   ['Molyember', 'Mothman • Point Pleasant', 'sky', 'R', 'mothman',
-   'Úgy odavan a lámpafényért, mint egy közönséges moly. A kerti lámpák körül a leggyakoribb.', {id:'mothman', rps:2}],
+   'Úgy odavan a lámpafényért, mint egy közönséges moly. A kerti lámpák körül a leggyakoribb.', {id:'mothman', rps:0.5}],
   ['Ogopogo', 'Okanagan-tó, Kanada', 'water', 'R', 'serp',
    'A kanadai Okanagan-tó híres lakója. Saját szobra és emléktárgyai is vannak, tehát biztosan létezik, nem?'],
   ['Champ', 'Champlain-tó, USA', 'water', 'R', 'serp',
@@ -912,7 +975,7 @@ addPack('sea', [
   ['Bunyip', 'Ausztrál őslakos legenda', 'water', 'R', 'beast',
    'Az ausztrál lagúnák rejtélyes lakója. A neve „szellem” vagy „ördög” jelentésű, ezért a helyiek nem fürdenek egyedül a sötét vízben.'],
   ['Nessie', 'Loch Ness-i Szörny', 'water', 'U', 'nessie',
-   'Évszázadok óta bújócskázik az emberekkel, és mindig nyer: a tó 230 méter mély.', {id:'nessie', rps:5}],
+   'Évszázadok óta bújócskázik az emberekkel, és mindig nyer: a tó 230 méter mély.', {id:'nessie', rps:2}],
   ['Kraken', 'Skandináv tengeri óriás', 'water', 'U', 'eye',
    'Csápjaival egész hajókat húz a mélybe. Valódi rokona az óriáskalmár, aki szerencsére fél az emberektől.'],
   ['Thunderbird', 'Észak-amerikai őslakos legenda', 'sky', 'U', 'bird',
@@ -993,6 +1056,53 @@ addPack('anomaly', [
    'Az óceán régiója, ahol a legenda szerint hajók és repülők tűnnek el. A statisztikák szerint nem többet, mint máshol.'],
   ['Voynich-kézirat', '15. századi rejtély', 'mystic', 'S', 'eye',
    'Ismeretlen nyelven írt, különös növényekkel és csillagtérképekkel teli könyv. Kódfejtők évszázadok óta nem tudták megfejteni.']
+]);
+
+addPack('cosmic', [
+  ['Mélységi Lény', 'Innsmouth partjai', 'water', 'C', 'hum',
+   'Kiguvadt szemű, halszerű lény, aki Innsmouth vizeiben él. A családi összejövetelek szerencsére a víz alatt zajlanak.', {id:'deep_one'}],
+  ['Hullaevő', 'Temetők alagútjai', 'earth', 'C', 'hairy',
+   'Temetői alagutak lakója, aki a legenda szerint jobban ismeri a föld alatti járatokat, mint a metró üzemeltetői.', {id:'ghoul'}],
+  ['Zoog', 'Az Álomvilág sompolygói', 'earth', 'C', 'beast',
+   'Apró, barna, éjszakai lény az Álomvilágból. A macskákkal régi ellenségeskedésben áll, és rendszerint ő húzza a rövidebbet.', {id:'zoog'}],
+  ['Barna Jenkin', 'A boszorkányház patkánya', 'earth', 'C', 'beast',
+   'Emberarcú, patkánytestű boszorkányszolga, aki álmokban látogatja az embereket. A macskák sem szeretik.', {id:'brown_jenkin'}],
+  ['Ghast', 'Zin boltozatai', 'earth', 'C', 'horned',
+   'Lovasszerű, patás lény az Álomvilág mélyéről, akit a napfény azonnal elpusztít. Ellene a legjobb védekezés a nappal.', {id:'ghast'}],
+  ['Éji Szörny', 'Az Álomvilág szárnyasa', 'ghost', 'C', 'bird',
+   'Arctalan, szarvas, szárnyas szörny. A legenda szerint az áldozatait csiklandozza, ezért a legrosszabb szülinapi meglepetés.', {id:'night_gaunt'}],
+  ['Yuggothi Gomba', 'A Plútó rózsaszín látogatói', 'anomaly', 'R', 'bird',
+   'A Plútóról (Yuggoth) érkező, szárnyas gombalények. Az agyakat hengerekben szállítják, mert a bőröndbe nem fér be.', {id:'mi_go'}],
+  ['Ősöreg', 'Az Őrület hegyeinek lakói', 'anomaly', 'R', 'alien',
+   'Hordó testű, csillagfejű ősi lények az Antarktiszról. Városuk akkor épült, amikor a mi történelmünk még el sem kezdődött.', {id:'elder_thing'}],
+  ['Yith Nagy Faja', 'Időutazó tudósok', 'anomaly', 'R', 'tall',
+   'Kúp alakú idegenek, akik az időn át testet cserélnek más korok tudósaival. A legjobb kutatócsere-program.', {id:'yith'}],
+  ['Csillagvámpír', 'Láthatatlan vérszívó', 'sky', 'R', 'blob',
+   'Láthatatlan szörny, amely csak akkor válik láthatóvá, ha már megivott egy áldozatot. Ez a legrosszabb sorrend.', {id:'star_vampire'}],
+  ['Tindalosi Kopó', 'Az idő szögletei', 'mystic', 'R', 'beast',
+   'Az idő szögletein át jön elő. A legenda szerint a lekerekített szobák biztonságosak, ideje kicserélni a kockás szőnyeget.', {id:'tindalos'}],
+  ['Az Űrből Jött Szín', 'A meteorit titka', 'anomaly', 'R', 'wisp',
+   'Egy meteorit hozta ismeretlen színű valami, amely kiszívja az életet a kút környékén. Színkód nincs rá a festékboltban.', {id:'colour_out_of_space'}],
+  ['Shoggoth', 'Az Ősöregek szolgái', 'water', 'U', 'blob',
+   'Alaktalan, szemekkel teli massza, amelyet az Ősöregek szolgának teremtettek. Aztán fellázadt. Ismerős történet.', {id:'shoggoth'}],
+  ['A Halemberek Istene', 'Mélységi Lények atyja', 'water', 'U', 'dragon',
+   'Nevét egy ősi, filiszteus istenről kapta, Lovecraft óta pedig a halemberek istene. A tengerparti halbolt reklámarca lehetne.', {id:'dagon'}],
+  ['Az Élő Láng', 'A Fomalhaut tűzlénye', 'anomaly', 'U', 'wisp',
+   'Élő láng a Fomalhaut csillagról. A tűzoltók szerint ezt még a legnagyobb sugárcső sem oltja el.', {id:'cthugha'}],
+  ['A Kígyók Atyja', 'Az amerikai préri istene', 'earth', 'U', 'serp',
+   'Kígyótestű isten, aki megbosszulja kígyói bántalmazóit. Ezért ajánlott a kígyóbarát kert.', {id:'yig'}],
+  ['Dunwichi Borzalom', 'Egy farm titka', 'earth', 'U', 'blob',
+   'Egy dunwichi farmon felnövő, láthatatlan szörny. Gyorsabban nő, mint a kukorica egy jó évben.', {id:'dunwich_horror'}],
+  ['A Nagy Álmodó', 'R’lyeh ura', 'water', 'S', 'squid',
+   'Az elsüllyedt R’lyeh városában alszik. Ha felébred, az pont úgy sül el, mint nálunk egy hétfő reggel.', {id:'cthulhu'}],
+  ['A Kúszó Káosz', 'Az istenek hírnöke', 'mystic', 'S', 'hood',
+   'Ezer alakot ölt, és az egyetlen isten, aki személyesen is megjelenik. Az ajtón mindig csönget, mielőtt belép.', {id:'nyarlathotep'}],
+  ['A Vak Őrült Isten', 'A kozmosz közepe', 'mystic', 'S', 'wisp',
+   'Az univerzum közepén fuvolaszóra tombol. Nem ébredt még fel, a szomszédok szerencsére nincsenek.', {id:'azathoth'}],
+  ['A Kapu és a Kulcs', 'Minden idő ura', 'mystic', 'S', 'eye',
+   'Minden idő és tér egyszerre jelen van benne. Az egyetlen lény, aki sosem késik el sehonnan, mert mindenhol ott van.', {id:'yog_sothoth'}],
+  ['Az Erdő Fekete Kecskéje', 'Ezer fióka anyja', 'forest', 'S', 'blob',
+   'Az Ezer Fiatal anyja. Az anyák napi köszöntéshez vele több időt kell előre szánni.', {id:'shub_niggurath'}]
 ]);
 
 /* ================= PROCEDURÁLIS ILLUSZTRÁCIÓK =================
@@ -1157,6 +1267,22 @@ const ARCH = {
     <circle cx="45" cy="45" r="2.4" fill="#fff"/><circle cx="50" cy="50" r="22" fill="${c.E}" opacity=".12"/>`;
   },
 
+  squid: c => `<path d="M28 94 Q22 70 34 62 M40 97 Q36 74 44 66 M50 99 Q50 76 50 68 M60 97 Q64 74 56 66 M72 94 Q78 70 66 62" stroke="${c.B2}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M22 58 Q4 54 6 34 M78 58 Q96 54 94 34" stroke="${c.B}" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <ellipse cx="50" cy="40" rx="22" ry="26" fill="${c.B}"/><ellipse cx="50" cy="48" rx="15" ry="13" fill="${c.B2}"/>
+    <path d="M30 26 Q50 6 70 26" stroke="${c.A}" stroke-width=".8" fill="none" opacity=".6"/>
+    ${eyes(43, 42, 57, 42, 2.8, c.E)}`,
+
+  blob: (c, r) => {
+    let e = '';
+    for (let i = 0; i < 7; i++) {
+      const x = (24 + r() * 52).toFixed(1), y = (38 + r() * 40).toFixed(1), q = 2 + r() * 2.2;
+      e += `<circle cx="${x}" cy="${y}" r="${q.toFixed(1)}" fill="#f4f6ff"/><circle cx="${x}" cy="${y}" r="${(q * .5).toFixed(1)}" fill="${c.E}"/>`;
+    }
+    return `<path d="M30 96 Q26 82 34 78 M46 98 Q44 84 52 80 M64 96 Q70 82 62 78 M78 92 Q86 80 76 74" stroke="${c.B2}" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M14 86 Q8 56 28 44 Q22 24 46 22 Q74 14 76 40 Q94 50 88 76 Q86 92 66 90 Q50 96 34 90 Q20 94 14 86Z" fill="${c.B}" stroke="${c.A}" stroke-width=".8"/>` + e;
+  },
+
   hood: c => `<path d="M50 14 Q28 18 26 56 L16 94 L84 94 L74 56 Q72 18 50 14Z" fill="${c.B}"/>
     <path d="M50 14 Q28 18 26 56" fill="none" stroke="${c.A}" stroke-width=".8" opacity=".5"/>
     <ellipse cx="50" cy="38" rx="11" ry="14" fill="#02030a"/>${eyes(45.5, 37, 54.5, 37, 2.1, c.E)}
@@ -1211,9 +1337,26 @@ function getRps(){
   let s = 0;
   for (const id in state.col) {
     const d = CARD_BY_ID[id], e = state.col[id];
-    if (d && e) s += d.rps * e.n;
+    if (d && e && e.n > 0) s += d.rps;          // minden megszerzett lény egyszer termel – a duplikátum nem
   }
   return s;
+}
+/* ===== duplikátumok eladása ===== */
+const sellPrice = def => { const pk = PACK_BY_ID[def.pack]; return Math.max(1, Math.round(pk.price / pk.count * SELL_MULT[def.rarity])); };
+const keepCount = def => def.evolvesTo ? EVO_COST : 1;       // a tömeges eladás megtartja az evolúcióhoz kellő lapokat
+function sellAllValue(){
+  let value = 0, count = 0;
+  for (const id in state.col) {
+    const d = CARD_BY_ID[id], e = state.col[id];
+    if (!d || !e) continue;
+    const x = e.n - keepCount(d);
+    if (x > 0) { value += x * sellPrice(d); count += x; }
+  }
+  return { value, count };
+}
+function artHTML(def){
+  const url = IMAGE_MAP[def.id] || (IMG_DIR ? IMG_DIR + def.id + '.jpg' : '');
+  return artSVG(def) + (url ? `<img class="realImg" src="${url}" alt="" loading="lazy" onerror="this.remove()">` : '');
 }
 const canEvolve = id => {
   const d = CARD_BY_ID[id], e = state.col[id];
@@ -1269,6 +1412,7 @@ function load(){
 }
 
 /* ================= KÁRTYA HTML ================= */
+const nameSize = s => s.length > 22 ? 11 : s.length > 19 ? 12 : s.length > 16 ? 13 : 14;
 function cardHTML(def, n, locked){
   const r = RARITY[def.rarity], t = TYPES[def.type], pk = PACK_BY_ID[def.pack];
   const evolved = !!def.from;
@@ -1280,19 +1424,19 @@ function cardHTML(def, n, locked){
     return `<div class="card locked ${r.cls} t-${def.type}">
       <div class="inner">
         <div class="c-head"><div class="c-name">???</div><div class="c-sub">Ismeretlen kriptid</div></div>
-        <div class="c-art">${artSVG(def)}</div>
+        <div class="c-art">${artHTML(def)}</div>
         <div class="c-meta"><span class="chip type">${t.icon} ${t.label}</span><span class="chip rar ${def.rarity}">${r.label}</span></div>
         <div class="c-fun"><b>FUNFACT</b>Még nem fedezted fel. ${hint}</div>
-        <div class="c-foot"><span class="lvl">Lv.0</span><span class="rps">+? RP/s</span></div>
+        <div class="c-foot"><span class="lvl">×0</span><span class="rps">+? RP/s</span></div>
       </div><div class="shine"></div></div>`;
   }
   return `<div class="card ${r.cls} t-${def.type}" data-id="${def.id}">
     <div class="inner">
-      <div class="c-head"><div class="c-name">${def.name}</div><div class="c-sub">${def.sub}</div></div>
-      <div class="c-art"><span class="stageTag ${evolved ? 's1' : ''}">${stageTxt}</span>${artSVG(def)}</div>
+      <div class="c-head"><div class="c-name" style="font-size:${nameSize(def.orig)}px">${def.orig}</div><div class="c-sub">${def.name !== def.orig ? def.name : def.sub}</div></div>
+      <div class="c-art"><span class="stageTag ${evolved ? 's1' : ''}">${stageTxt}</span>${artHTML(def)}</div>
       <div class="c-meta"><span class="chip type">${t.icon} ${t.label}</span><span class="chip rar ${def.rarity}">${r.label}</span></div>
       <div class="c-fun"><b>FUNFACT</b>${def.fact}</div>
-      <div class="c-foot"><span class="lvl">Lv.${n}</span><span class="rps">+${fmtRps(def.rps * n)} RP/s</span></div>
+      <div class="c-foot"><span class="lvl">×${n}</span><span class="rps">+${fmtRps(n > 0 ? def.rps : 0)} RP/s</span></div>
     </div><div class="shine"></div></div>`;
 }
 
@@ -1333,7 +1477,7 @@ function slotHTML(def){
       ${seen ? `<span class="copies" title="Példányok">×${n}</span>` : ''}
       ${evolved ? '<span class="ribbon">EVOLVÁLVA</span>' : ''}
     </div>
-    <div class="slotCap">Kinyitva <b>${seen ? 1 : 0}/1</b></div>
+    <div class="slotCap">Kinyitva <b>${seen ? 1 : 0}/1</b>${n > 1 ? ` • <span class="dupCap">♻ ${n - 1} dupl.</span>` : ''}</div>
     ${evoBtn}
   </div>`;
 }
@@ -1401,6 +1545,7 @@ function renderBinder(opts = {}){
 
   renderFilters();
   $('foundCount').textContent = countSeen(CARDS);
+  updateSellButtons();
   $('totalCount').textContent = CARDS.length;
 }
 
@@ -1454,7 +1599,7 @@ function toast(msg){
 
 /* ================= KERESÉS ================= */
 $('searchBtn').addEventListener('click', e => {
-  state.rp += 1;
+  state.rp += CLICK_RP;
   state.clicks++;
   const btn = $('searchBtn');
   let x, y;
@@ -1462,7 +1607,7 @@ $('searchBtn').addEventListener('click', e => {
   else { const r = btn.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top + r.height / 3; }
   const f = document.createElement('span');
   f.className = 'floatTxt';
-  f.textContent = '+1 RP';
+  f.textContent = '+' + CLICK_RP + ' RP';
   f.style.left = (x + (Math.random() * 40 - 20)) + 'px';
   f.style.top = y + 'px';
   document.body.appendChild(f);
@@ -1546,6 +1691,7 @@ function showReveal(){
   $('nextBtn').textContent = last ? 'Összegzés ✔' : 'Következő ▶';
   $('skipBtn').style.display = last ? 'none' : '';
   $('closeBtn').style.display = 'none';
+  $('sellBtn').style.display = 'none';
   $('tapHint').textContent = 'Koppints a kártyára!';
   flipped = false;
   clearTimeout(flipTimer);
@@ -1568,11 +1714,11 @@ function flipCard(){
     if (!pend || pend.idx !== tok || pend.phase !== 'reveal') return;
     const rt = $('resultText');
     rt.style.color = COLORS[def.rarity];
-    rt.textContent = cur.wasNew ? '✨ ÚJ KÁRTYA!' : `⬆ SZINTLÉPÉS!  Lv.${cur.prev} → Lv.${cur.level}`;
-    if (def.evolvesTo) {
-      $('resultSub').textContent = cur.level >= EVO_COST ? '⚡ Az evolúció elérhető az albumban!'
-                                                         : `Példányok: ${cur.level} / ${EVO_COST} az evolúcióhoz`;
-    }
+    rt.textContent = cur.wasNew ? '✨ ÚJ KÁRTYA!' : `♻ DUPLIKÁTUM  •  ×${cur.level} példány`;
+    const bits = [];
+    if (!cur.wasNew) bits.push(`Eladható: +${fmt(sellPrice(def))} RP`);
+    if (def.evolvesTo) bits.push(cur.level >= EVO_COST ? '⚡ Az evolúció elérhető az albumban!' : `Evolúcióhoz: ${cur.level} / ${EVO_COST} példány`);
+    $('resultSub').textContent = bits.join('  •  ');
     $('nextBtn').disabled = false;
   }, 1000);
 }
@@ -1595,17 +1741,18 @@ function showSummary(){
   $('packTitle').textContent = `${pk.icon} ${pk.name} – a csomag tartalma`;
   $('sumGrid').innerHTML = cards.map(c =>
     `<div class="sumItem">${cardHTML(c.def, c.level, false)}
-      <span class="sumTag ${c.wasNew ? 'new' : 'up'}">${c.wasNew ? 'ÚJ!' : 'Lv.' + c.prev + '→' + c.level}</span></div>`).join('');
+      <span class="sumTag ${c.wasNew ? 'new' : 'up'}">${c.wasNew ? 'ÚJ!' : '♻ DUPLIKÁTUM'}</span></div>`).join('');
   $('sumGrid').style.display = '';
   const nn = cards.filter(c => c.wasNew).length, nu = cards.length - nn;
   const rt = $('resultText');
   rt.style.color = COLORS[best];
-  rt.textContent = `✨ ${nn} új kártya  •  ⬆ ${nu} szintlépés`;
+  rt.textContent = `✨ ${nn} új kártya  •  ♻ ${nu} duplikátum`;
   const evo = [...new Set(cards.map(c => c.def.id))].filter(canEvolve).map(id => CARD_BY_ID[id].name);
   $('resultSub').textContent = evo.length ? '⚡ Evolúció elérhető: ' + evo.join(', ') : '';
   $('skipBtn').style.display = 'none';
   $('nextBtn').style.display = 'none';
   $('closeBtn').style.display = '';
+  updateSellButtons();
 }
 
 function closeOverlay(){
@@ -1618,6 +1765,41 @@ function closeOverlay(){
   renderShop();
   updateUI();
   save();
+}
+
+/* ================= ELADÁS ================= */
+function updateSellButtons(){
+  const sa = sellAllValue();
+  const label = sa.count ? `💰 Duplikátumok eladása (+${fmt(sa.value)} RP)` : '💰 Nincs eladható duplikátum';
+  const a = $('sellAllBtn'), b = $('sellBtn');
+  a.textContent = label; a.disabled = !sa.count;
+  b.textContent = label; b.disabled = !sa.count;
+  if (pend && pend.phase === 'sum') b.style.display = '';
+}
+function sellAll(){
+  const sa = sellAllValue();
+  if (!sa.count) { toast('Nincs eladható duplikátum.'); return; }
+  for (const id in state.col) {
+    const d = CARD_BY_ID[id], e = state.col[id];
+    if (d && e && e.n > keepCount(d)) e.n = keepCount(d);
+  }
+  state.rp += sa.value;
+  toast(`💰 ${sa.count} duplikátum eladva: +${fmt(sa.value)} RP`);
+  save();
+  renderBinder();
+  renderShop();
+  updateUI();
+}
+function sellOne(id){
+  const d = CARD_BY_ID[id], e = state.col[id];
+  if (!d || !e || e.n <= 1) return;
+  e.n--;
+  state.rp += sellPrice(d);
+  toast(`💰 ${d.name} eladva: +${fmt(sellPrice(d))} RP`);
+  save();
+  renderBinder();
+  updateUI();
+  openModal(id);
 }
 
 /* ================= EVOLÚCIÓ ================= */
@@ -1715,19 +1897,20 @@ function openModal(id){
   }
 
   $('mInfo').innerHTML = `
-    <h2>${def.name}</h2>
-    <div class="mSub">${def.sub} • ${def.from ? 'Stage 1' : 'Basic'}</div>
+    <h2>${def.orig}</h2>
+    <div class="mSub">${def.name !== def.orig ? 'Magyarul: <b style="color:#fff">' + def.name + '</b> • ' : ''}${def.sub} • ${def.from ? 'Stage 1' : 'Basic'}</div>
     <div class="mChips">
       <span class="chip type" style="color:#fff">${t.icon} ${t.label}</span>
       <span class="chip rar ${def.rarity}">${r.label}</span>
     </div>
     <div class="mStats">
-      <div class="stat"><small>Szint (Level)</small><b>Lv.${n}</b></div>
-      <div class="stat"><small>Példányok</small><b>${n}</b></div>
-      <div class="stat"><small>Termelés / példány</small><b class="g">+${fmtRps(def.rps)} RP/s</b></div>
-      <div class="stat"><small>Összes termelés</small><b class="g">+${fmtRps(def.rps * n)} RP/s</b></div>
+      <div class="stat"><small>Példányok</small><b>×${n}</b></div>
+      <div class="stat"><small>Passzív termelés</small><b class="g">+${fmtRps(n > 0 ? def.rps : 0)} RP/s</b></div>
       <div class="stat wide"><small>Csomag • album #${String(def.no).padStart(3, '0')}</small><b>${pk.icon} ${pk.name}</b></div>
     </div>
+    ${n > 1 ? `<div class="mSec sellSec"><h4>Duplikátum</h4>
+      <div class="mHint" style="margin:0 0 8px">${n - 1} felesleges példányod van. Eladási ár: <b>${fmt(sellPrice(def))} RP</b> / db.</div>
+      <button class="sellBtnS" type="button" data-m-sell>💰 Egy eladása (+${fmt(sellPrice(def))} RP)</button></div>` : ''}
     ${evo}`;
   $('mFact').innerHTML = `<div class="fl">📖 FUNFACT</div><p>${def.fact}</p>`;
   $('modal').classList.add('show');
@@ -1743,6 +1926,8 @@ $('stage').addEventListener('click', flipCard);
 $('nextBtn').addEventListener('click', nextCard);
 $('skipBtn').addEventListener('click', showSummary);
 $('closeBtn').addEventListener('click', closeOverlay);
+$('sellBtn').addEventListener('click', sellAll);
+$('sellAllBtn').addEventListener('click', sellAll);
 $('evoClose').addEventListener('click', closeEvo);
 
 $('prevPg').addEventListener('click', () => goPage(-1));
@@ -1774,6 +1959,7 @@ $('binder').addEventListener('click', e => {
 $('mClose').addEventListener('click', closeModal);
 $('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(); });
 $('mInfo').addEventListener('click', e => {
+  if (e.target.closest('[data-m-sell]')) { sellOne(modalId); return; }
   if (e.target.closest('[data-m-evolve]')) {
     const id = modalId;
     closeModal();
