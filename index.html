@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cryptid Explorer TCG</title>
+<style>
+:root{
+  --bg:#07080f;
+  --panel:#0e1020;
+  --panel2:#14172b;
+  --line:#26294a;
+  --green:#5dff8f;
+  --purple:#a96bff;
+  --blue:#4fb8ff;
+  --text:#e6e9ff;
+  --muted:#8b90b8;
+  --s:.78;
+  --ms:1.5;     /* modal kártya méretarány */
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{
+  font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(900px 500px at 10% -10%,rgba(93,255,143,.10),transparent 60%),
+    radial-gradient(900px 600px at 100% 0%,rgba(169,107,255,.14),transparent 60%),
+    radial-gradient(800px 600px at 50% 120%,rgba(79,184,255,.10),transparent 60%),
+    var(--bg);
+  background-attachment:fixed;
+  overflow-x:hidden;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;
+  background-image:
+    radial-gradient(1px 1px at 20px 30px,#fff,transparent),
+    radial-gradient(1px 1px at 120px 90px,#bfe,transparent),
+    radial-gradient(1.5px 1.5px at 220px 40px,#cbf,transparent),
+    radial-gradient(1px 1px at 300px 160px,#fff,transparent),
+    radial-gradient(1px 1px at 70px 200px,#9cf,transparent);
+  background-size:340px 240px;
+}
+button{font-family:inherit}
+.layout{position:relative;display:flex;gap:22px;padding:20px;max-width:1500px;margin:0 auto;align-items:flex-start}
+.side{width:350px;flex:none;position:sticky;top:20px;display:flex;flex-direction:column;gap:18px}
+.main{flex:1;min-width:0}
+
+.panel{
+  background:linear-gradient(180deg,var(--panel2),var(--panel));
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:18px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.02) inset,0 10px 40px rgba(0,0,0,.45);
+}
+.logo{
+  text-align:center;font-weight:900;letter-spacing:.14em;text-transform:uppercase;font-size:20px;
+  color:var(--green);
+  text-shadow:0 0 8px rgba(93,255,143,.8),0 0 24px rgba(93,255,143,.4),0 0 40px rgba(169,107,255,.5);
+}
+.logo small{display:block;font-size:11px;letter-spacing:.4em;color:var(--purple);text-shadow:0 0 10px rgba(169,107,255,.8);margin-top:4px}
+
+.counter{text-align:center}
+.counter .label{font-size:12px;letter-spacing:.25em;color:var(--muted);text-transform:uppercase}
+.counter .rp{
+  font-size:46px;font-weight:800;line-height:1.1;margin:4px 0;
+  color:#fff;text-shadow:0 0 14px rgba(79,184,255,.8),0 0 36px rgba(79,184,255,.35);
+  font-variant-numeric:tabular-nums;
+}
+.counter .rps{color:var(--green);font-weight:600;text-shadow:0 0 8px rgba(93,255,143,.5)}
+
+.search-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+#searchBtn{
+  position:relative;width:200px;height:200px;border-radius:50%;cursor:pointer;
+  border:2px solid var(--green);
+  background:radial-gradient(circle at 35% 30%,#1f5a37,#0b1f15 70%);
+  color:var(--green);font-weight:800;letter-spacing:.06em;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  box-shadow:0 0 22px rgba(93,255,143,.5),0 0 60px rgba(93,255,143,.2),inset 0 0 30px rgba(93,255,143,.25);
+  animation:breathe 3s ease-in-out infinite;
+  transition:transform .08s;
+  user-select:none;-webkit-tap-highlight-color:transparent;
+}
+#searchBtn:hover{filter:brightness(1.15)}
+#searchBtn:active{transform:scale(.94)}
+#searchBtn .ico{font-size:62px;filter:drop-shadow(0 0 10px rgba(93,255,143,.9))}
+#searchBtn .txt{font-size:15px;text-align:center;line-height:1.2;padding:0 20px;text-shadow:0 0 8px rgba(93,255,143,.8)}
+.hint{font-size:12px;color:var(--muted)}
+@keyframes breathe{
+  0%,100%{box-shadow:0 0 22px rgba(93,255,143,.45),0 0 60px rgba(93,255,143,.18),inset 0 0 30px rgba(93,255,143,.2)}
+  50%{box-shadow:0 0 34px rgba(93,255,143,.8),0 0 90px rgba(93,255,143,.3),inset 0 0 40px rgba(93,255,143,.35)}
+}
+.floatTxt{
+  position:fixed;pointer-events:none;z-index:300;font-weight:800;font-size:22px;color:var(--green);
+  text-shadow:0 0 10px rgba(93,255,143,.9);animation:floatUp .9s ease-out forwards;
+}
+@keyframes floatUp{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,-70px)}}
+
+/* Bolt */
+.shop h3{font-size:13px;letter-spacing:.25em;text-transform:uppercase;color:var(--purple);margin-bottom:12px;text-shadow:0 0 10px rgba(169,107,255,.6)}
+.packItem{display:flex;gap:14px;align-items:center}
+.packArt{
+  position:relative;flex:none;width:76px;height:108px;border-radius:8px;
+  background:
+    repeating-linear-gradient(115deg,rgba(255,255,255,.07) 0 6px,transparent 6px 14px),
+    linear-gradient(160deg,#5b2db0,#1b1245 60%,#0d3b4a);
+  border:1px solid rgba(190,160,255,.6);
+  box-shadow:0 0 18px rgba(169,107,255,.55);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;
+  transform:rotate(-5deg);
+}
+.packArt::before,.packArt::after{content:"";position:absolute;left:0;right:0;height:6px;background:repeating-linear-gradient(90deg,#c9b2ff 0 3px,#6b4bc2 3px 6px);opacity:.8}
+.packArt::before{top:0}.packArt::after{bottom:0}
+.packArt .eye{font-size:28px;filter:drop-shadow(0 0 8px #b98cff)}
+.packArt .pn{font-size:8px;letter-spacing:.2em;font-weight:800;color:#e6d8ff;text-align:center}
+.packInfo{flex:1}
+.packInfo .nm{font-weight:700;font-size:16px}
+.packInfo .pr{color:var(--blue);font-weight:700;margin:2px 0 8px}
+#buyBtn{
+  width:100%;padding:10px;border-radius:10px;font-weight:700;cursor:pointer;font-size:14px;
+  color:#fff;border:1px solid var(--purple);
+  background:linear-gradient(180deg,#6d34d1,#4a1fa0);
+  box-shadow:0 0 14px rgba(169,107,255,.5);
+  transition:transform .08s,filter .15s,opacity .15s;
+}
+#buyBtn:hover:not(:disabled){filter:brightness(1.2)}
+#buyBtn:active:not(:disabled){transform:scale(.97)}
+#buyBtn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;filter:grayscale(.5)}
+.bar{height:6px;border-radius:4px;background:#0a0b17;margin-top:8px;overflow:hidden;border:1px solid var(--line)}
+.bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--purple),var(--blue));box-shadow:0 0 8px var(--blue)}
+.odds{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;font-size:12px;color:var(--muted)}
+.odds span{display:flex;align-items:center;gap:6px}
+.evoNote{margin-top:12px;font-size:12px;color:var(--muted);border-top:1px dashed var(--line);padding-top:10px;line-height:1.45}
+.evoNote b{color:var(--green)}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.dot.common{background:#7c8496}
+.dot.rare{background:#d6dde8;box-shadow:0 0 6px #d6dde8}
+.dot.ultra{background:#ffd34d;box-shadow:0 0 8px #ffc107}
+.dot.secret{background:conic-gradient(#ff0080,#ffe600,#00ff6a,#00d4ff,#a96bff,#ff0080);box-shadow:0 0 8px #c6f}
+
+.tools{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
+.tools button{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px}
+.tools button:hover{color:#ff7b8a;border-color:#ff7b8a}
+
+/* ===== ALBUM HEADER ===== */
+.albumHead{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.albumHead h2{font-size:24px;letter-spacing:.08em;color:var(--blue);text-shadow:0 0 14px rgba(79,184,255,.6)}
+.albumHead .sub{color:var(--muted);font-size:14px}
+
+/* ===== KÁRTYA ===== */
+.card{
+  --c1:#222;--c2:#444;--accent:#fff;
+  position:relative;width:200px;height:284px;padding:5px;border-radius:15px;flex:none;
+  color:#fff;
+}
+.card .inner{
+  position:relative;height:100%;border-radius:11px;overflow:hidden;display:flex;flex-direction:column;
+  background:linear-gradient(165deg,var(--c1),#090a14 85%);
+}
+.card.t-forest{--c1:#14522d;--c2:#2f9a56;--accent:#6dff9b}
+.card.t-sky{--c1:#17407a;--c2:#3b86e6;--accent:#7cc8ff}
+.card.t-water{--c1:#0b5b63;--c2:#1fb3a9;--accent:#58ffe9}
+.card.t-mystic{--c1:#4a2192;--c2:#9a56f0;--accent:#d2a4ff}
+
+.c-head{padding:7px 9px 4px}
+.c-name{font-weight:800;font-size:14px;line-height:1.1;text-shadow:0 0 8px var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-sub{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;opacity:.65;line-height:1.25}
+.c-art{
+  flex:none;height:100px;margin:0 7px;border-radius:8px;overflow:hidden;position:relative;
+  background:radial-gradient(circle at 50% 35%,var(--c2),var(--c1) 75%);
+  border:1px solid rgba(255,255,255,.22);box-shadow:inset 0 0 18px rgba(0,0,0,.55);
+}
+.c-art svg{width:100%;height:100%;display:block}
+.stageTag{
+  position:absolute;top:4px;left:4px;z-index:2;font-size:8.5px;font-weight:800;letter-spacing:.12em;
+  padding:2px 6px;border-radius:5px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.35);color:#fff;
+}
+.stageTag.s1{color:#ffe27a;border-color:#ffe27a;box-shadow:0 0 8px rgba(255,226,122,.5)}
+.c-meta{display:flex;justify-content:space-between;gap:4px;padding:6px 8px 0}
+.chip{font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.2);white-space:nowrap}
+.chip.type{color:var(--accent);border-color:var(--accent)}
+.chip.rar.common{color:#aab1c2}
+.chip.rar.rare{color:#e4eaf3}
+.chip.rar.ultra{color:#ffd34d;border-color:#ffd34d}
+.chip.rar.secret{color:#fff;border-color:#ff9aff;background:linear-gradient(90deg,rgba(255,0,128,.5),rgba(0,200,255,.5))}
+.c-fun{flex:1;padding:6px 10px 0;font-size:9.5px;line-height:1.35;font-style:italic;opacity:.85;overflow:hidden}
+.c-fun b{display:block;font-style:normal;font-size:8px;letter-spacing:.18em;color:var(--accent);margin-bottom:1px;opacity:.95}
+.c-foot{display:flex;justify-content:space-between;align-items:center;padding:6px 10px 8px;font-weight:800;font-size:13px;border-top:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.28)}
+.c-foot .lvl{color:#fff;background:rgba(255,255,255,.14);padding:1px 8px;border-radius:6px}
+.c-foot .rps{color:var(--accent);text-shadow:0 0 6px var(--accent)}
+.shine{position:absolute;inset:5px;border-radius:11px;pointer-events:none;display:none}
+
+/* Ritkaságok */
+.r-common{background:#3b4254;border:1px solid #555d73}
+.r-rare{
+  background:linear-gradient(135deg,#f6f9fc,#8e98a8 25%,#e9edf3 50%,#7a8493 75%,#f6f9fc);
+  box-shadow:0 0 14px rgba(205,215,230,.35);
+}
+.r-ultra{
+  background:linear-gradient(135deg,#fff1a8,#d9a300 30%,#ffe780 55%,#b57f00 80%,#fff1a8);
+  animation:goldGlow 2.2s ease-in-out infinite;
+}
+@keyframes goldGlow{
+  0%,100%{box-shadow:0 0 12px rgba(255,200,40,.55),0 0 28px rgba(255,190,0,.3)}
+  50%{box-shadow:0 0 22px rgba(255,220,80,.95),0 0 52px rgba(255,190,0,.55)}
+}
+.r-ultra .shine{display:block;background:linear-gradient(115deg,transparent 35%,rgba(255,240,170,.28) 50%,transparent 65%);background-size:250% 100%;animation:sweep 3.2s linear infinite}
+.r-secret{
+  background:linear-gradient(115deg,#ff0080,#ff8c00,#ffe600,#00ff6a,#00d4ff,#7a5cff,#ff0080);
+  background-size:300% 300%;animation:holoBorder 4s linear infinite;
+}
+.r-secret::before{
+  content:"";position:absolute;inset:-6px;border-radius:20px;z-index:-1;
+  background:linear-gradient(115deg,#ff0080,#ffe600,#00ff6a,#00d4ff,#7a5cff,#ff0080);
+  background-size:300% 300%;filter:blur(14px);opacity:.85;
+  animation:holoBorder 4s linear infinite,hue 5s linear infinite;
+}
+.r-secret .shine{
+  display:block;mix-blend-mode:color-dodge;opacity:.55;
+  background:
+    linear-gradient(115deg,transparent 20%,rgba(255,255,255,.55) 40%,transparent 60%),
+    linear-gradient(60deg,rgba(255,0,200,.35),rgba(0,255,220,.35),rgba(255,230,0,.35));
+  background-size:260% 100%,100% 100%;
+  animation:sweep 2.6s linear infinite;
+}
+@keyframes sweep{from{background-position:150% 0,0 0}to{background-position:-100% 0,0 0}}
+@keyframes holoBorder{0%{background-position:0% 50%}100%{background-position:300% 50%}}
+@keyframes hue{from{filter:blur(14px) hue-rotate(0)}to{filter:blur(14px) hue-rotate(360deg)}}
+
+/* Még fel nem fedezett kártya – szürke sziluett */
+.card.locked{filter:saturate(.15) brightness(.55)}
+.card.locked .c-art svg{filter:brightness(0) opacity(.75)}
+.card.locked .c-art::after{content:"?";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;font-weight:900;color:rgba(255,255,255,.7)}
+.card.locked.r-ultra,.card.locked.r-secret{animation:none;box-shadow:none}
+.card.locked.r-secret::before{display:none}
+.card.locked .shine{display:none}
+
+/* ===== BINDER (ALBUM) ===== */
+.binderWrap{
+  position:relative;padding:24px 22px 14px;border-radius:22px;
+  background:linear-gradient(145deg,#171a36,#0b0c1a 60%,#0e1226);
+  border:1px solid #2f3466;
+  box-shadow:0 0 0 1px rgba(255,255,255,.03) inset,0 0 40px rgba(169,107,255,.18),0 20px 60px rgba(0,0,0,.6);
+}
+.binderWrap::before{content:"";position:absolute;inset:9px;border:2px dashed rgba(93,255,143,.25);border-radius:16px;pointer-events:none}
+.pages{display:flex;justify-content:center;align-items:stretch;position:relative}
+.page{
+  flex:none;padding:12px 14px 16px;border-radius:10px;
+  background:
+    linear-gradient(rgba(79,184,255,.04) 1px,transparent 1px) 0 0/100% 24px,
+    linear-gradient(180deg,#0d1024,#080a16);
+  border:1px solid #23284d;box-shadow:inset 0 0 30px rgba(0,0,0,.6);
+}
+.pageHead{font-size:10px;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;text-align:center;margin-bottom:10px}
+.pocketGrid{display:grid;grid-template-columns:repeat(2,auto);gap:16px 14px;justify-content:center}
+.spine{flex:none;width:34px;display:flex;flex-direction:column;justify-content:space-around;align-items:center;padding:34px 0}
+.ring{
+  width:44px;height:12px;border-radius:8px;margin:0 -5px;position:relative;z-index:2;
+  background:linear-gradient(180deg,#eef0ff,#7f86b0 55%,#c9cff0);
+  box-shadow:0 0 8px rgba(169,107,255,.65),0 2px 4px rgba(0,0,0,.6);
+}
+.pages.turn-next{animation:turnNext .5s ease}
+.pages.turn-prev{animation:turnPrev .5s ease}
+@keyframes turnNext{from{opacity:.15;transform:perspective(1400px) rotateY(-14deg) translateX(40px)}to{opacity:1;transform:none}}
+@keyframes turnPrev{from{opacity:.15;transform:perspective(1400px) rotateY(14deg) translateX(-40px)}to{opacity:1;transform:none}}
+
+.slot{display:flex;flex-direction:column;align-items:center;gap:6px}
+.slotNum{font-size:10px;letter-spacing:.2em;color:#5d6296;font-weight:700}
+.pocket{
+  position:relative;width:calc(200px * var(--s));height:calc(284px * var(--s));
+  border-radius:calc(15px * var(--s));
+  transition:transform .2s;
+}
+.pocket .card{position:absolute;left:0;top:0;transform:scale(var(--s));transform-origin:0 0}
+.pocket::after{ /* műanyag zseb csillogás */
+  content:"";position:absolute;inset:-3px;border-radius:calc(17px * var(--s));pointer-events:none;z-index:5;
+  border:1px solid rgba(255,255,255,.09);
+  background:linear-gradient(120deg,rgba(255,255,255,.09),transparent 32%,transparent 70%,rgba(255,255,255,.05));
+}
+.slot[data-seen="1"] .pocket{cursor:pointer}
+.slot[data-seen="1"] .pocket:hover{transform:translateY(-6px)}
+.slot[data-seen="0"] .pocket{cursor:help}
+.pocket.flash{animation:cardFlash .9s ease-out}
+@keyframes cardFlash{0%{transform:scale(1.1);filter:brightness(1.8)}100%{transform:scale(1);filter:none}}
+.pocket.evolved .card{filter:grayscale(.6) brightness(.65)}
+.copies{
+  position:absolute;top:-9px;right:-9px;z-index:6;min-width:27px;height:27px;padding:0 6px;border-radius:14px;
+  background:#0b0d1b;border:1px solid var(--green);color:var(--green);font-weight:800;font-size:12px;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 0 9px rgba(93,255,143,.6);
+}
+.ribbon{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-14deg);z-index:6;white-space:nowrap;
+  background:rgba(10,12,25,.9);border:1px solid var(--purple);color:#d9c3ff;padding:5px 12px;
+  font-weight:800;font-size:12px;letter-spacing:.2em;border-radius:6px;box-shadow:0 0 12px rgba(169,107,255,.6);
+}
+.slotCap{font-size:11px;color:var(--muted);letter-spacing:.06em}
+.slotCap b{color:var(--green)}
+.slot[data-seen="0"] .slotCap b{color:#6e739b}
+.emptyPocket{border:1px dashed rgba(255,255,255,.08);background:rgba(255,255,255,.015)}
+.emptyPocket::after{display:none}
+
+.evoBtn{
+  padding:6px 14px;border-radius:9px;font-weight:800;font-size:12px;letter-spacing:.12em;cursor:pointer;
+  color:#06210f;border:1px solid #b8ffd0;background:linear-gradient(180deg,#8dffb4,#34d870);
+  animation:evoPulseBtn 1.4s ease-in-out infinite;
+}
+.evoBtn:disabled{animation:none;opacity:.35;cursor:not-allowed;filter:grayscale(.6)}
+.evoBtn.big{padding:11px 26px;font-size:14px}
+@keyframes evoPulseBtn{0%,100%{box-shadow:0 0 8px rgba(93,255,143,.5)}50%{box-shadow:0 0 22px rgba(93,255,143,1)}}
+
+.binderNav{display:flex;justify-content:center;align-items:center;gap:18px;margin-top:14px;font-size:13px;color:var(--muted);letter-spacing:.1em}
+.binderNav button{
+  width:42px;height:34px;border-radius:10px;cursor:pointer;font-size:16px;color:var(--blue);
+  background:#0c0e20;border:1px solid #2f3466;box-shadow:0 0 10px rgba(79,184,255,.2);
+}
+.binderNav button:hover:not(:disabled){filter:brightness(1.4)}
+.binderNav button:disabled{opacity:.3;cursor:not-allowed;box-shadow:none}
+
+/* ===== OVERLAYOK (pack, evolúció) ===== */
+.ov{
+  position:fixed;inset:0;z-index:100;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  background:rgba(4,4,12,.92);backdrop-filter:blur(6px);overflow-y:auto;padding:16px 0;
+}
+.ov.show{display:flex;animation:fadeIn .3s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.ov .aura{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity 1s}
+.ov.revealed .aura{opacity:1}
+.ov.rar-common .aura{background:radial-gradient(circle at 50% 45%,rgba(160,170,190,.18),transparent 55%)}
+.ov.rar-rare .aura{background:radial-gradient(circle at 50% 45%,rgba(220,230,245,.3),transparent 55%)}
+.ov.rar-ultra .aura{background:radial-gradient(circle at 50% 45%,rgba(255,200,40,.4),transparent 58%)}
+.ov.rar-secret .aura{background:conic-gradient(from 0deg at 50% 45%,rgba(255,0,128,.35),rgba(255,230,0,.3),rgba(0,255,106,.3),rgba(0,212,255,.35),rgba(122,92,255,.35),rgba(255,0,128,.35));animation:spin 6s linear infinite;mask-image:radial-gradient(circle at 50% 45%,#000,transparent 62%);-webkit-mask-image:radial-gradient(circle at 50% 45%,#000,transparent 62%)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ov > *{position:relative;z-index:2;flex:none}
+.ov > .aura{position:fixed;z-index:1}
+.resultText{min-height:30px;font-size:22px;font-weight:800;letter-spacing:.08em;text-align:center;text-shadow:0 0 14px currentColor;padding:0 14px}
+.resultSub{min-height:18px;font-size:14px;color:var(--muted);text-align:center;padding:0 14px}
+.btnRow{display:flex;gap:12px;align-items:center;min-height:44px}
+.btnGreen{
+  padding:11px 34px;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;
+  color:#fff;border:1px solid var(--green);background:linear-gradient(180deg,#1d8a4f,#0e5a33);
+  box-shadow:0 0 16px rgba(93,255,143,.5);transition:opacity .2s;
+}
+.btnGreen:disabled{opacity:0;pointer-events:none}
+.tapHint{font-size:12px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;height:14px}
+.ovTitle{font-size:18px;font-weight:700;letter-spacing:.06em;text-align:center;color:#fff;text-shadow:0 0 14px var(--green);padding:0 14px}
+
+.stage{width:270px;height:384px;perspective:1100px;cursor:pointer}
+.flipper{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform 1.1s cubic-bezier(.2,.8,.2,1)}
+.flipper.flipped{transform:rotateY(180deg)}
+.flipper.shake{animation:shake .5s ease-in-out infinite}
+@keyframes shake{
+  0%,100%{transform:rotate(0) scale(1)}
+  20%{transform:rotate(-4deg) scale(1.03)}
+  40%{transform:rotate(4deg) scale(1.05)}
+  60%{transform:rotate(-3deg) scale(1.03)}
+  80%{transform:rotate(3deg) scale(1.05)}
+}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:20px}
+.face.front{transform:rotateY(180deg)}
+.face.front .card{transform:scale(1.35);transform-origin:0 0}
+.face.back{
+  border:3px solid #9b6cff;
+  background:
+    radial-gradient(circle at 50% 50%,rgba(169,107,255,.45),transparent 55%),
+    repeating-linear-gradient(45deg,rgba(255,255,255,.05) 0 8px,transparent 8px 18px),
+    linear-gradient(160deg,#2a1466,#0b0820 60%,#0b3a44);
+  box-shadow:0 0 40px rgba(169,107,255,.7),inset 0 0 40px rgba(0,0,0,.6);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+}
+.face.back .big{font-size:84px;filter:drop-shadow(0 0 16px #b98cff)}
+.face.back .cap{font-size:12px;letter-spacing:.4em;color:#d9c8ff;font-weight:700}
+
+/* Evolúció animáció */
+.evoStage{position:relative;width:270px;height:384px}
+.evoCard{position:absolute;inset:0}
+.evoCard .card{transform:scale(1.35);transform-origin:0 0}
+.evoCard.hidden{opacity:0;pointer-events:none}
+.evoCard.pulse{animation:evoPulse 2s ease-in forwards}
+@keyframes evoPulse{
+  0%{filter:brightness(1);transform:scale(1)}
+  25%{filter:brightness(1.4) drop-shadow(0 0 20px #fff);transform:scale(1.03)}
+  50%{filter:brightness(2) drop-shadow(0 0 30px #fff);transform:scale(.97)}
+  75%{filter:brightness(3) drop-shadow(0 0 40px #fff);transform:scale(1.06)}
+  100%{filter:brightness(6) drop-shadow(0 0 60px #fff);transform:scale(1.1)}
+}
+.evoCard.appear{animation:evoAppear 1.1s cubic-bezier(.2,.9,.2,1) forwards}
+@keyframes evoAppear{
+  0%{opacity:0;filter:brightness(6);transform:scale(.7) rotate(-6deg)}
+  60%{opacity:1;filter:brightness(1.6);transform:scale(1.08) rotate(1deg)}
+  100%{opacity:1;filter:none;transform:none}
+}
+.evoFlash{position:absolute;inset:-70px;border-radius:50%;background:radial-gradient(circle,#fff 0,rgba(255,255,255,.8) 30%,transparent 70%);opacity:0;pointer-events:none;z-index:5}
+.evoFlash.go{animation:flash 1.2s ease-out}
+@keyframes flash{0%{opacity:0;transform:scale(.4)}35%{opacity:1;transform:scale(1.2)}100%{opacity:0;transform:scale(1.7)}}
+
+/* ===== MODAL ===== */
+.modal{position:fixed;inset:0;z-index:150;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(4,4,12,.86);backdrop-filter:blur(6px);overflow-y:auto}
+.modal.show{display:flex;animation:fadeIn .25s}
+.mbox{
+  position:relative;margin:auto;width:100%;max-width:880px;border-radius:22px;padding:26px 26px 20px;
+  background:linear-gradient(160deg,#151837,#0a0b18 70%);
+  border:1px solid var(--gc,#4a4f86);
+  box-shadow:0 0 40px var(--gc,#4a4f86),0 0 0 1px rgba(255,255,255,.04) inset;
+  animation:popIn .35s cubic-bezier(.2,.9,.2,1);
+}
+.mbox.rar-common{--gc:rgba(138,147,168,.45)}
+.mbox.rar-rare{--gc:rgba(214,226,245,.5)}
+.mbox.rar-ultra{--gc:rgba(255,201,51,.6)}
+.mbox.rar-secret{--gc:rgba(255,107,240,.6)}
+@keyframes popIn{from{opacity:0;transform:scale(.8) translateY(30px)}to{opacity:1;transform:none}}
+.mClose{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:50%;cursor:pointer;color:var(--muted);background:#0c0e20;border:1px solid #2f3466;font-size:15px;z-index:3}
+.mClose:hover{color:#fff;border-color:var(--purple)}
+.mTop{display:flex;gap:30px;align-items:center;justify-content:center;flex-wrap:wrap}
+.mcardWrap{position:relative;width:calc(200px * var(--ms));height:calc(284px * var(--ms));flex:none}
+.mcardWrap.common{--glow:#8a93a8}
+.mcardWrap.rare{--glow:#d6e2f5}
+.mcardWrap.ultra{--glow:#ffc933}
+.mcardWrap.secret{--glow:#ff6bf0}
+.mglow{position:absolute;inset:-50px;border-radius:50%;background:radial-gradient(circle,var(--glow),transparent 62%);opacity:.5;filter:blur(10px);pointer-events:none}
+.mcardWrap.secret .mglow{animation:hue2 5s linear infinite}
+@keyframes hue2{from{filter:blur(10px) hue-rotate(0)}to{filter:blur(10px) hue-rotate(360deg)}}
+.mcard{position:absolute;inset:0;transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .15s;will-change:transform}
+.mcard .card{transform:scale(var(--ms));transform-origin:0 0}
+.mInfo{flex:1;min-width:260px;max-width:430px}
+.mInfo h2{font-size:26px;text-shadow:0 0 14px var(--green);margin-bottom:2px}
+.mInfo .mSub{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.mChips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.mStats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.stat{background:#0c0e20;border:1px solid #23284d;border-radius:10px;padding:8px 10px}
+.stat small{display:block;font-size:10px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+.stat b{font-size:17px;color:#fff}
+.stat b.g{color:var(--green);text-shadow:0 0 8px rgba(93,255,143,.5)}
+.mSec{border:1px solid #23284d;border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.02)}
+.mSec h4{font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:var(--purple);margin-bottom:8px}
+.chain{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.node{flex:1;min-width:110px;padding:6px 8px;border-radius:9px;background:#0c0e20;border:1px solid #2a2f5c;font-weight:700;font-size:13px}
+.node small{display:block;font-weight:600;font-size:10px;color:var(--muted);letter-spacing:.06em}
+.node.cur{border-color:var(--green);box-shadow:0 0 10px rgba(93,255,143,.35)}
+.arrowE{color:var(--green);font-size:18px}
+.pips{display:flex;align-items:center;gap:6px;margin-bottom:10px;font-size:12px;color:var(--muted)}
+.pip{width:22px;height:10px;border-radius:5px;background:#1a1d3a;border:1px solid #2f3466}
+.pip.on{background:linear-gradient(90deg,var(--green),#2bd68a);border-color:var(--green);box-shadow:0 0 8px rgba(93,255,143,.6)}
+.mHint{font-size:12px;color:var(--muted);margin-top:8px}
+.mFact{
+  margin-top:18px;padding:14px 18px;border-radius:14px;
+  background:linear-gradient(90deg,rgba(93,255,143,.08),rgba(169,107,255,.08));
+  border:1px solid rgba(93,255,143,.35);box-shadow:0 0 18px rgba(93,255,143,.12);
+}
+.mFact .fl{font-size:11px;letter-spacing:.3em;font-weight:800;color:var(--green);margin-bottom:6px;text-shadow:0 0 8px rgba(93,255,143,.6)}
+.mFact p{font-size:15px;line-height:1.5;font-style:italic;color:#e8ecff}
+
+#toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(30px);opacity:0;z-index:400;
+  background:var(--panel2);border:1px solid var(--green);color:var(--green);padding:10px 18px;border-radius:12px;
+  box-shadow:0 0 18px rgba(93,255,143,.4);transition:.35s;pointer-events:none;font-size:14px;max-width:90vw;text-align:center;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (max-width:900px){
+  .layout{flex-direction:column;padding:12px}
+  .side{width:100%;position:static}
+  .main{width:100%}
+}
+@media (max-width:640px){
+  :root{--s:.64;--ms:1.2}
+  .binderWrap{padding:18px 10px 12px}
+  .spine{display:none}
+  .page{padding:10px 10px 14px}
+  .pocketGrid{gap:12px 10px}
+  .mbox{padding:22px 14px 16px}
+}
+
+/* ===== v3 kiegészítések ===== */
+.card.t-ghost{--c1:#2f3a78;--c2:#8e9be0;--accent:#c4ccff}
+.card.t-anomaly{--c1:#7a3a0c;--c2:#f0942e;--accent:#ffc861}
+.card.t-earth{--c1:#4a4630;--c2:#9c9560;--accent:#e6dd9a}
+
+.side{max-height:calc(100vh - 40px);overflow-y:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:#3a3f78 transparent}
+.side::-webkit-scrollbar{width:6px}
+.side::-webkit-scrollbar-thumb{background:#3a3f78;border-radius:3px}
+
+/* Bolt – csomaglista */
+.packList{display:flex;flex-direction:column;gap:10px}
+.packRow{
+  position:relative;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;
+  padding:9px 10px 12px;border-radius:12px;
+  background:linear-gradient(120deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  border:1px solid var(--line);
+}
+.packRow:hover{border-color:var(--pc1)}
+.packMini{
+  width:44px;height:60px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:22px;
+  background:repeating-linear-gradient(115deg,rgba(255,255,255,.08) 0 5px,transparent 5px 12px),linear-gradient(160deg,var(--pc1),var(--pc2));
+  border:1px solid rgba(255,255,255,.35);box-shadow:0 0 14px color-mix(in srgb,var(--pc1) 60%,transparent);
+  transform:rotate(-4deg);
+}
+.packMini span{filter:drop-shadow(0 0 6px rgba(0,0,0,.6))}
+.pName{font-weight:700;font-size:14px;line-height:1.15}
+.pMeta{font-size:11px;color:var(--muted);margin-top:2px}
+.pMeta b{color:var(--green)}
+.pDesc{font-size:10.5px;color:#6f75a6;margin-top:2px;line-height:1.3}
+.buyBtn{
+  padding:8px 11px;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap;
+  color:#fff;border:1px solid var(--purple);background:linear-gradient(180deg,#6d34d1,#4a1fa0);
+  box-shadow:0 0 12px rgba(169,107,255,.45);transition:transform .08s,filter .15s,opacity .15s;
+}
+.buyBtn .bp{color:#ffe27a}
+.buyBtn:hover:not(:disabled){filter:brightness(1.2)}
+.buyBtn:active:not(:disabled){transform:scale(.96)}
+.buyBtn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;filter:grayscale(.5)}
+.pbar{position:absolute;left:10px;right:10px;bottom:4px;height:3px;border-radius:2px;background:#0a0b17;overflow:hidden}
+.pbar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--pc1),var(--blue))}
+.shop .odds{margin-top:14px}
+
+/* Album szűrők */
+.filters{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+.fchip{
+  padding:6px 11px;border-radius:99px;font-size:12px;cursor:pointer;color:var(--muted);
+  background:#0c0e20;border:1px solid #2a2f5c;transition:.15s;
+}
+.fchip b{color:#cfd4ff;font-weight:700;margin-left:3px}
+.fchip:hover{border-color:var(--blue);color:#fff}
+.fchip.on{color:#fff;border-color:var(--green);background:linear-gradient(180deg,rgba(93,255,143,.18),rgba(93,255,143,.05));box-shadow:0 0 12px rgba(93,255,143,.3)}
+.fchip.done b{color:var(--green)}
+.fchip.toggle{margin-left:auto}
+.fchip.toggle.on{border-color:var(--purple);background:linear-gradient(180deg,rgba(169,107,255,.25),rgba(169,107,255,.06));box-shadow:0 0 12px rgba(169,107,255,.4)}
+
+/* Binder dinamikus rács */
+.pocketGrid{grid-template-columns:repeat(var(--cols,2),auto)}
+.emptyView{padding:70px 20px;text-align:center;color:var(--muted);line-height:1.7;font-size:15px}
+.binderNav select{
+  min-width:150px;height:34px;border-radius:10px;padding:0 10px;cursor:pointer;
+  background:#0c0e20;color:var(--text);border:1px solid #2f3466;font-size:13px;font-family:inherit;
+}
+.binderNav select:focus{outline:none;border-color:var(--blue)}
+.slotNum{white-space:nowrap}
+.slot .evoBtn{margin-top:-2px}
+
+/* Csomagkibontás: összegzés */
+.btnGhost{
+  padding:11px 20px;border-radius:12px;font-weight:600;font-size:14px;cursor:pointer;
+  color:var(--muted);background:transparent;border:1px solid #3a3f78;
+}
+.btnGhost:hover{color:#fff;border-color:var(--blue)}
+.sumGrid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(162px,max-content));gap:22px 16px;justify-content:center;
+  width:min(1120px,96%);padding:10px 4px;
+}
+.sumItem{position:relative;width:calc(200px * .8);height:calc(284px * .8);animation:sumIn .5s cubic-bezier(.2,.9,.2,1) backwards}
+.sumItem:nth-child(2){animation-delay:.08s}.sumItem:nth-child(3){animation-delay:.16s}
+.sumItem:nth-child(4){animation-delay:.24s}.sumItem:nth-child(5){animation-delay:.32s}.sumItem:nth-child(6){animation-delay:.4s}
+@keyframes sumIn{from{opacity:0;transform:translateY(30px) scale(.85)}to{opacity:1;transform:none}}
+.sumItem .card{position:absolute;left:0;top:0;transform:scale(.8);transform-origin:0 0}
+.sumTag{
+  position:absolute;top:-17px;left:50%;transform:translateX(-50%);white-space:nowrap;z-index:8;padding:3px 9px;border-radius:8px;font-size:11px;font-weight:800;letter-spacing:.08em;
+  border:1px solid;background:#0b0d1b;
+}
+.sumTag.new{color:#06210f;background:linear-gradient(180deg,#8dffb4,#34d870);border-color:#b8ffd0;box-shadow:0 0 12px rgba(93,255,143,.8)}
+.sumTag.up{color:#ffe27a;border-color:#ffe27a;box-shadow:0 0 10px rgba(255,226,122,.5)}
+.mStats .wide{grid-column:1 / -1}
+
+@media (max-width:900px){
+  .side{max-height:none;overflow:visible;padding-right:0}
+}
+@media (max-width:640px){
+  .fchip.toggle{margin-left:0}
+  .sumItem{width:calc(200px * .62);height:calc(284px * .62)}
+  .sumItem .card{transform:scale(.62)}
+  .sumGrid{grid-template-columns:repeat(auto-fit,minmax(126px,max-content));gap:18px 10px}
+}
+
+.c-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sumGrid{padding-top:22px}
+</style>
+</head>
+<body>
+<div class="layout">
+  <!-- BAL OLDAL -->
+  <aside class="side">
+    <div class="panel logo">Cryptid Explorer<small>TCG • Idle</small></div>
+
+    <div class="panel counter">
+      <div class="label">Kutatási Pont</div>
+      <div class="rp" id="rpDisplay">0</div>
+      <div class="rps">⚡ <span id="rpsDisplay">0</span> RP / mp</div>
+    </div>
+
+    <div class="panel search-wrap">
+      <button id="searchBtn" type="button" aria-label="Kriptid nyomok keresése">
+        <span class="ico">🔍</span>
+        <span class="txt">Kriptid nyomok keresése</span>
+      </button>
+      <div class="hint">+1 RP kattintásonként</div>
+    </div>
+
+    <div class="panel shop">
+      <h3>Bolt – tematikus csomagok</h3>
+      <div id="packList" class="packList"></div>
+      <div class="odds">
+        <span><i class="dot common"></i>Common 60%</span>
+        <span><i class="dot rare"></i>Rare 25%</span>
+        <span><i class="dot ultra"></i>Ultra Rare 12%</span>
+        <span><i class="dot secret"></i>Secret Rare 3%</span>
+      </div>
+      <div class="evoNote">Minden csomagnak <b>saját kártyakészlete</b> van: két külön csomagból sosem húzhatsz ugyanolyan lényt. Minden csomagban garantált egy <b>Rare+</b> találat. <b>⚡ Evolúció:</b> az alapkártyából <b>3 példány</b> kell az EVOLVE gombhoz.</div>
+    </div>
+
+    <div class="panel tools">
+      <span>Kinyitott csomagok: <b id="packsCount">0</b></span>
+      <button id="resetBtn" type="button">Újrakezdés</button>
+    </div>
+  </aside>
+
+  <!-- JOBB OLDAL: BINDER -->
+  <main class="main">
+    <div class="albumHead">
+      <h2>📖 Kriptid Album</h2>
+      <div class="sub">Kinyitva: <b id="foundCount">0</b> / <span id="totalCount">0</span></div>
+    </div>
+    <div class="filters" id="filters"></div>
+    <div class="binderWrap">
+      <div id="binder"></div>
+      <div class="binderNav">
+        <button id="prevPg" type="button" aria-label="Előző oldal">◀</button>
+        <select id="pgSel" aria-label="Oldal kiválasztása"></select>
+        <button id="nextPg" type="button" aria-label="Következő oldal">▶</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Csomag kibontás -->
+<div id="overlay" class="ov">
+  <div class="aura"></div>
+  <div class="ovTitle" id="packTitle"></div>
+  <div class="tapHint" id="tapHint">Koppints a kártyára!</div>
+  <div class="stage" id="stage">
+    <div class="flipper" id="flipper">
+      <div class="face back"><div class="big">👁️</div><div class="cap">CRYPTID</div></div>
+      <div class="face front" id="frontFace"></div>
+    </div>
+  </div>
+  <div class="sumGrid" id="sumGrid" style="display:none"></div>
+  <div class="resultText" id="resultText"></div>
+  <div class="resultSub" id="resultSub"></div>
+  <div class="btnRow">
+    <button id="skipBtn" class="btnGhost" type="button">Összes felfedése ⏭</button>
+    <button id="nextBtn" class="btnGreen" type="button" disabled>Következő ▶</button>
+    <button id="closeBtn" class="btnGreen" type="button" style="display:none">Tovább</button>
+  </div>
+</div>
+
+<!-- Evolúció -->
+<div id="evoOv" class="ov">
+  <div class="aura"></div>
+  <div class="ovTitle" id="evoTitle"></div>
+  <div class="evoStage">
+    <div class="evoCard" id="evoOld"></div>
+    <div class="evoCard hidden" id="evoNew"></div>
+    <div class="evoFlash" id="evoFlash"></div>
+  </div>
+  <div class="resultText" id="evoResult"></div>
+  <div class="resultSub" id="evoSub"></div>
+  <div class="btnRow"><button id="evoClose" class="btnGreen" type="button" disabled>Tovább</button></div>
+</div>
+
+<!-- Kártya részletek (pop-up) -->
+<div id="modal" class="modal">
+  <div class="mbox" id="mbox">
+    <button class="mClose" id="mClose" type="button" aria-label="Bezárás">✕</button>
+    <div class="mTop">
+      <div class="mcardWrap" id="mCardWrap"><div class="mglow"></div><div class="mcard" id="mCard"></div></div>
+      <div class="mInfo" id="mInfo"></div>
+    </div>
+    <div class="mFact" id="mFact"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(() => {
+'use strict';
+const CUSTOM_SVG = {"bigfoot": "<svg viewBox=\"0 0 100 100\" preserveAspectRatio=\"xMidYMid slice\">\n        <circle cx=\"80\" cy=\"18\" r=\"9\" fill=\"#e8ffe9\" opacity=\".85\"/>\n        <polygon points=\"-4,100 12,38 28,100\" fill=\"#08301a\"/>\n        <polygon points=\"2,100 20,50 38,100\" fill=\"#0b4426\"/>\n        <polygon points=\"68,100 86,36 104,100\" fill=\"#08301a\"/>\n        <polygon points=\"78,100 92,52 108,100\" fill=\"#0b4426\"/>\n        <ellipse cx=\"30\" cy=\"62\" rx=\"6\" ry=\"19\" fill=\"#2c1e12\" transform=\"rotate(14 30 62)\"/>\n        <ellipse cx=\"70\" cy=\"62\" rx=\"6\" ry=\"19\" fill=\"#2c1e12\" transform=\"rotate(-14 70 62)\"/>\n        <ellipse cx=\"50\" cy=\"70\" rx=\"21\" ry=\"28\" fill=\"#3b2a1a\"/>\n        <circle cx=\"50\" cy=\"38\" r=\"13\" fill=\"#4a3522\"/>\n        <ellipse cx=\"50\" cy=\"42\" rx=\"7\" ry=\"6\" fill=\"#6b4d33\"/>\n        <circle cx=\"44.5\" cy=\"36\" r=\"2.4\" fill=\"#7dff6b\"/>\n        <circle cx=\"55.5\" cy=\"36\" r=\"2.4\" fill=\"#7dff6b\"/>\n        <rect x=\"38\" y=\"92\" width=\"10\" height=\"10\" rx=\"4\" fill=\"#2c1e12\"/>\n        <rect x=\"52\" y=\"92\" width=\"10\" height=\"10\" rx=\"4\" fill=\"#2c1e12\"/>\n      </svg>", "mothman": "<svg viewBox=\"0 0 100 100\" preserveAspectRatio=\"xMidYMid slice\">\n        <circle cx=\"50\" cy=\"40\" r=\"26\" fill=\"#cfe6ff\" opacity=\".18\"/>\n        <circle cx=\"50\" cy=\"40\" r=\"17\" fill=\"#e9f3ff\" opacity=\".35\"/>\n        <circle cx=\"12\" cy=\"14\" r=\"1.2\" fill=\"#fff\"/><circle cx=\"88\" cy=\"22\" r=\"1.4\" fill=\"#fff\"/>\n        <circle cx=\"24\" cy=\"80\" r=\"1\" fill=\"#fff\"/><circle cx=\"82\" cy=\"78\" r=\"1.2\" fill=\"#fff\"/>\n        <path d=\"M50 46 L4 14 L14 52 L6 74 L38 66 Z\" fill=\"#1c2750\" stroke=\"#6fb2ff\" stroke-width=\"1\"/>\n        <path d=\"M50 46 L96 14 L86 52 L94 74 L62 66 Z\" fill=\"#1c2750\" stroke=\"#6fb2ff\" stroke-width=\"1\"/>\n        <path d=\"M50 48 L20 30 M50 52 L14 52 M50 56 L26 66\" stroke=\"#4a78c8\" stroke-width=\".8\" fill=\"none\"/>\n        <path d=\"M50 48 L80 30 M50 52 L86 52 M50 56 L74 66\" stroke=\"#4a78c8\" stroke-width=\".8\" fill=\"none\"/>\n        <ellipse cx=\"50\" cy=\"62\" rx=\"9\" ry=\"22\" fill=\"#10152e\"/>\n        <circle cx=\"50\" cy=\"38\" r=\"9\" fill=\"#10152e\"/>\n        <circle cx=\"45\" cy=\"38\" r=\"4\" fill=\"#ff3b3b\"/>\n        <circle cx=\"55\" cy=\"38\" r=\"4\" fill=\"#ff3b3b\"/>\n        <circle cx=\"45\" cy=\"38\" r=\"7\" fill=\"#ff3b3b\" opacity=\".25\"/>\n        <circle cx=\"55\" cy=\"38\" r=\"7\" fill=\"#ff3b3b\" opacity=\".25\"/>\n      </svg>", "nessie": "<svg viewBox=\"0 0 100 100\" preserveAspectRatio=\"xMidYMid slice\">\n        <circle cx=\"22\" cy=\"20\" r=\"9\" fill=\"#e6fffb\" opacity=\".8\"/>\n        <path d=\"M0 62 Q25 52 50 62 T100 62 V100 H0Z\" fill=\"#0a4a55\" opacity=\".6\"/>\n        <path d=\"M30 80 C26 52 40 28 60 34\" stroke=\"#2f8f7a\" stroke-width=\"10\" fill=\"none\" stroke-linecap=\"round\"/>\n        <ellipse cx=\"66\" cy=\"34\" rx=\"9\" ry=\"6\" fill=\"#3aa68e\" transform=\"rotate(12 66 34)\"/>\n        <circle cx=\"69\" cy=\"32\" r=\"1.8\" fill=\"#fff\"/><circle cx=\"69.4\" cy=\"32\" r=\".9\" fill=\"#021\"/>\n        <circle cx=\"72\" cy=\"80\" r=\"11\" fill=\"#2f8f7a\"/>\n        <circle cx=\"88\" cy=\"82\" r=\"8\" fill=\"#2f8f7a\"/>\n        <path d=\"M0 76 Q12 68 25 76 T50 76 T75 76 T100 76 V100 H0Z\" fill=\"#0d7d86\" opacity=\".9\"/>\n        <path d=\"M0 88 Q12 81 25 88 T50 88 T75 88 T100 88 V100 H0Z\" fill=\"#095a64\"/>\n        <path d=\"M10 70 q4 -3 8 0 M60 72 q4 -3 8 0\" stroke=\"#aaf6ee\" stroke-width=\"1\" fill=\"none\" opacity=\".7\"/>\n      </svg>", "chupacabra": "<svg viewBox=\"0 0 100 100\" preserveAspectRatio=\"xMidYMid slice\">\n        <circle cx=\"50\" cy=\"52\" r=\"34\" fill=\"#d9a6ff\" opacity=\".14\"/>\n        <circle cx=\"50\" cy=\"52\" r=\"22\" fill=\"#d9a6ff\" opacity=\".12\"/>\n        <polygon points=\"26,52 31,34 36,50\" fill=\"#ff5ad8\"/>\n        <polygon points=\"36,48 42,28 48,47\" fill=\"#ff5ad8\"/>\n        <polygon points=\"47,47 54,27 60,48\" fill=\"#ff5ad8\"/>\n        <polygon points=\"58,48 65,31 70,52\" fill=\"#ff5ad8\"/>\n        <ellipse cx=\"48\" cy=\"62\" rx=\"28\" ry=\"15\" fill=\"#2a1250\"/>\n        <rect x=\"26\" y=\"68\" width=\"6\" height=\"22\" rx=\"3\" fill=\"#2a1250\"/>\n        <rect x=\"38\" y=\"70\" width=\"6\" height=\"22\" rx=\"3\" fill=\"#2a1250\"/>\n        <rect x=\"58\" y=\"70\" width=\"6\" height=\"22\" rx=\"3\" fill=\"#2a1250\"/>\n        <rect x=\"68\" y=\"68\" width=\"6\" height=\"22\" rx=\"3\" fill=\"#2a1250\"/>\n        <path d=\"M22 60 Q8 56 6 70\" stroke=\"#2a1250\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"/>\n        <polygon points=\"68,50 90,62 70,74\" fill=\"#3a1a6e\"/>\n        <polygon points=\"86,62 82,67 79,63\" fill=\"#fff\"/>\n        <circle cx=\"75\" cy=\"58\" r=\"3\" fill=\"#ffe84a\"/>\n        <circle cx=\"75\" cy=\"58\" r=\"6\" fill=\"#ffe84a\" opacity=\".3\"/>\n        <path d=\"M30 56 q6 -4 12 0\" stroke=\"#7a3fd1\" stroke-width=\"1\" fill=\"none\"/>\n      </svg>", "hanyistok": "<svg viewBox=\"0 0 100 100\" preserveAspectRatio=\"xMidYMid slice\">\n        <circle cx=\"78\" cy=\"18\" r=\"9\" fill=\"#e6fff1\" opacity=\".85\"/>\n        <path d=\"M10 72 L12 32 M18 72 L16 40 M86 72 L88 36 M93 72 L91 44\" stroke=\"#2f6b3c\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n        <ellipse cx=\"12\" cy=\"30\" rx=\"2.2\" ry=\"6\" fill=\"#6b4a26\"/>\n        <ellipse cx=\"16\" cy=\"38\" rx=\"2.2\" ry=\"6\" fill=\"#6b4a26\"/>\n        <ellipse cx=\"88\" cy=\"34\" rx=\"2.2\" ry=\"6\" fill=\"#6b4a26\"/>\n        <ellipse cx=\"91\" cy=\"42\" rx=\"2.2\" ry=\"6\" fill=\"#6b4a26\"/>\n        <circle cx=\"50\" cy=\"54\" r=\"14\" fill=\"#7fb89a\"/>\n        <path d=\"M36 50 Q50 30 64 50 Q56 43 50 46 Q44 43 36 50Z\" fill=\"#2f5a3a\"/>\n        <path d=\"M40 42 L36 30 M50 38 L50 26 M60 42 L64 30\" stroke=\"#3f8a4d\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n        <circle cx=\"44.5\" cy=\"55\" r=\"2.6\" fill=\"#0b1f18\"/><circle cx=\"55.5\" cy=\"55\" r=\"2.6\" fill=\"#0b1f18\"/>\n        <circle cx=\"45.2\" cy=\"54.2\" r=\".8\" fill=\"#fff\"/><circle cx=\"56.2\" cy=\"54.2\" r=\".8\" fill=\"#fff\"/>\n        <path d=\"M45 61 Q50 65 55 61\" stroke=\"#0b1f18\" stroke-width=\"1.4\" fill=\"none\" stroke-linecap=\"round\"/>\n        <path d=\"M0 64 Q12 58 25 64 T50 64 T75 64 T100 64 V100 H0Z\" fill=\"#0f5a52\" opacity=\".88\"/>\n        <path d=\"M0 82 Q12 76 25 82 T50 82 T75 82 T100 82 V100 H0Z\" fill=\"#0a3f42\"/>\n        <ellipse cx=\"22\" cy=\"72\" rx=\"9\" ry=\"3\" fill=\"#2f8a4a\"/>\n        <circle cx=\"68\" cy=\"74\" r=\"2.4\" fill=\"none\" stroke=\"#aaf\" stroke-width=\".8\"/>\n        <circle cx=\"73\" cy=\"69\" r=\"1.6\" fill=\"none\" stroke=\"#aaf\" stroke-width=\".8\"/>\n        <circle cx=\"34\" cy=\"80\" r=\"1.8\" fill=\"none\" stroke=\"#aaf\" stroke-width=\".8\"/>\n      </svg>", "fanyuvokolyok": "<svg viewBox=\"0 0 100 100\" preserveAspectRatio=\"xMidYMid slice\">\n        <circle cx=\"20\" cy=\"18\" r=\"8\" fill=\"#eaffd9\" opacity=\".8\"/>\n        <polygon points=\"-4,100 10,45 24,100\" fill=\"#08301a\"/>\n        <ellipse cx=\"76\" cy=\"16\" rx=\"24\" ry=\"14\" fill=\"#0c4a28\"/>\n        <rect x=\"68\" y=\"20\" width=\"14\" height=\"80\" fill=\"#4a3320\"/>\n        <path d=\"M70 40 l8 4 M70 48 l9 3 M71 56 l7 4\" stroke=\"#e9c58a\" stroke-width=\"1.4\" stroke-linecap=\"round\"/>\n        <rect x=\"38\" y=\"84\" width=\"6\" height=\"14\" rx=\"3\" fill=\"#4b3a22\"/>\n        <rect x=\"50\" y=\"84\" width=\"6\" height=\"14\" rx=\"3\" fill=\"#4b3a22\"/>\n        <ellipse cx=\"46\" cy=\"72\" rx=\"15\" ry=\"18\" fill=\"#4b3a22\"/>\n        <path d=\"M58 64 Q64 58 70 52\" stroke=\"#4b3a22\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"/>\n        <path d=\"M70 52 l3 -4 M70 52 l5 -1 M70 52 l4 3\" stroke=\"#e9c58a\" stroke-width=\"1.4\" stroke-linecap=\"round\"/>\n        <circle cx=\"46\" cy=\"48\" r=\"11\" fill=\"#5a4629\"/>\n        <polygon points=\"37,40 35,31 43,37\" fill=\"#5a4629\"/>\n        <polygon points=\"55,40 57,31 49,37\" fill=\"#5a4629\"/>\n        <circle cx=\"42\" cy=\"48\" r=\"3.4\" fill=\"#d9ff5a\"/><circle cx=\"51\" cy=\"48\" r=\"3.4\" fill=\"#d9ff5a\"/>\n        <circle cx=\"42.6\" cy=\"48\" r=\"1.4\" fill=\"#10200a\"/><circle cx=\"51.6\" cy=\"48\" r=\"1.4\" fill=\"#10200a\"/>\n        <path d=\"M43 54 Q46.5 57 50 54\" stroke=\"#1d1308\" stroke-width=\"1.2\" fill=\"none\" stroke-linecap=\"round\"/>\n      </svg>", "fanyuvo": "<svg viewBox=\"0 0 100 100\" preserveAspectRatio=\"xMidYMid slice\">\n        <polygon points=\"0,70 18,40 34,62 52,32 72,64 88,44 100,66 100,100 0,100\" fill=\"#0a2a1c\" opacity=\".9\"/>\n        <circle cx=\"82\" cy=\"16\" r=\"8\" fill=\"#eaffd9\" opacity=\".8\"/>\n        <rect x=\"2\" y=\"30\" width=\"10\" height=\"70\" fill=\"#3b2a18\"/>\n        <rect x=\"88\" y=\"24\" width=\"10\" height=\"76\" fill=\"#3b2a18\"/>\n        <path d=\"M4 48 l3 3 M4 60 l3 2 M92 44 l3 3 M92 58 l3 2\" stroke=\"#e9c58a\" stroke-width=\"1.2\"/>\n        <ellipse cx=\"50\" cy=\"66\" rx=\"12\" ry=\"30\" fill=\"#2e2416\"/>\n        <path d=\"M44 50 L56 52 M43 62 L57 64 M44 74 L56 76\" stroke=\"#4a3a24\" stroke-width=\"1.2\"/>\n        <path d=\"M40 46 Q22 60 20 88\" stroke=\"#2e2416\" stroke-width=\"5\" fill=\"none\" stroke-linecap=\"round\"/>\n        <path d=\"M60 46 Q78 60 80 88\" stroke=\"#2e2416\" stroke-width=\"5\" fill=\"none\" stroke-linecap=\"round\"/>\n        <path d=\"M20 88 l-5 8 M20 88 l1 9 M20 88 l6 7 M80 88 l5 8 M80 88 l-1 9 M80 88 l-6 7\" stroke=\"#e9c58a\" stroke-width=\"1.8\" stroke-linecap=\"round\"/>\n        <ellipse cx=\"50\" cy=\"30\" rx=\"9\" ry=\"11\" fill=\"#3d3020\"/>\n        <path d=\"M43 22 L37 10 L32 12 M37 10 L39 4 M57 22 L63 10 L68 12 M63 10 L61 4\" stroke=\"#7a5a30\" stroke-width=\"2\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n        <circle cx=\"46\" cy=\"29\" r=\"2.8\" fill=\"#ffb347\"/><circle cx=\"54\" cy=\"29\" r=\"2.8\" fill=\"#ffb347\"/>\n        <circle cx=\"46\" cy=\"29\" r=\"5.5\" fill=\"#ffb347\" opacity=\".25\"/><circle cx=\"54\" cy=\"29\" r=\"5.5\" fill=\"#ffb347\" opacity=\".25\"/>\n        <rect x=\"26\" y=\"52\" width=\"3\" height=\"5\" fill=\"#8a6a3a\" transform=\"rotate(25 26 52)\"/>\n        <rect x=\"72\" y=\"58\" width=\"3\" height=\"5\" fill=\"#8a6a3a\" transform=\"rotate(-30 72 58)\"/>\n        <rect x=\"30\" y=\"72\" width=\"2.4\" height=\"4\" fill=\"#8a6a3a\" transform=\"rotate(50 30 72)\"/>\n      </svg>"};
+
+/* ================= KONSTANSOK ================= */
+const EVO_COST = 3;
+const SAVE_KEY = 'cryptidExplorerTCG_v3';
+const OLD_KEYS = ['cryptidExplorerTCG_v2', 'cryptidExplorerTCG_v1'];
+
+const TYPES = {
+  forest: {label:'Erdő',      icon:'🌲'},
+  sky:    {label:'Égi',       icon:'🌙'},
+  water:  {label:'Vízi',      icon:'🌊'},
+  mystic: {label:'Misztikus', icon:'🔮'},
+  ghost:  {label:'Kísértet',  icon:'👻'},
+  anomaly:{label:'Anomália',  icon:'🛸'},
+  earth:  {label:'Földi',     icon:'🪨'}
+};
+
+const RARITY = {
+  common:{label:'Common',      chance:60, cls:'r-common'},
+  rare:  {label:'Rare',        chance:25, cls:'r-rare'},
+  ultra: {label:'Ultra Rare',  chance:12, cls:'r-ultra'},
+  secret:{label:'Secret Rare', chance:3,  cls:'r-secret'}
+};
+const RAR_KEYS = ['common', 'rare', 'ultra', 'secret'];
+const RLET = {C:'common', R:'rare', U:'ultra', S:'secret'};
+
+/* Tematikus csomagok – minden kártya pontosan EGY csomaghoz tartozik,
+   így két külön csomagból sosem húzhatsz ugyanolyan kártyát. */
+const PACKS = [
+  {id:'hungary', name:'Magyar Rejtélyek',  icon:'🇭🇺', price:120,  count:5, guarantee:'rare', c1:'#2f9a4a', c2:'#b02a3a', desc:'Hazai népmesék, hiedelmek és rejtélyek.'},
+  {id:'forest',  name:'Erdők Mélye',       icon:'🌲',  price:150,  count:5, guarantee:'rare', c1:'#1f7a45', c2:'#0b2a1b', desc:'Szőrös óriások és vadon fenevadai.'},
+  {id:'ghost',   name:'Kísértetjárás',     icon:'👻',  price:250,  count:5, guarantee:'rare', c1:'#5a68c8', c2:'#161a3a', desc:'Szellemek, lidércek és nyughatatlan lelkek.'},
+  {id:'urban',   name:'Városi Legendák',   icon:'🏙️', price:350,  count:5, guarantee:'rare', c1:'#c04aa8', c2:'#2a1030', desc:'Suttogott történetek és internetes rémek.'},
+  {id:'sea',     name:'Mélység & Ég',      icon:'🌊',  price:500,  count:5, guarantee:'rare', c1:'#1fb3b0', c2:'#0b2f55', desc:'Tavi szörnyek és égi árnyak.'},
+  {id:'myth',    name:'Mitológiai Lények', icon:'🐉',  price:750,  count:6, guarantee:'ultra',c1:'#d99a2b', c2:'#4a1f0b', desc:'Ősi istenek szörnyei – garantált Ultra Rare+!'},
+  {id:'anomaly', name:'Anomália Dosszié',  icon:'🛸',  price:1000, count:6, guarantee:'ultra',c1:'#f0742e', c2:'#2a0f3a', desc:'Megmagyarázhatatlan jelenségek – garantált Ultra Rare+!'}
+];
+const PACK_BY_ID = Object.fromEntries(PACKS.map(p => [p.id, p]));
+
+/* ================= SEGÉDEK ================= */
+function hash(str){
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function slug(name){
+  return name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+/* Passzív termelés (RP/mp) – szándékosan kicsi értékek */
+const RPS_TABLE = {
+  common:[0.1, 0.2],
+  rare:  [1, 1.5, 2],
+  ultra: [4, 5, 6],
+  secret:[10, 12, 15]
+};
+
+const DB = [];
+/* sor: [név, alcím, típus, ritkaság(C/R/U/S), art, funfact, {extra}] */
+function addPack(packId, rows){
+  rows.forEach(r => {
+    const [name, sub, type, rl, art, fact, ex = {}] = r;
+    const rarity = RLET[rl];
+    const tbl = RPS_TABLE[rarity];
+    const id = ex.id || slug(name);
+    DB.push({
+      id, name, sub, type, rarity, art, fact, pack: packId,
+      rps: ex.rps != null ? ex.rps : tbl[hash(name) % tbl.length],
+      evolvesTo: ex.evolvesTo || null,
+      evoOnly: !!ex.evoOnly
+    });
+  });
+}
+
+addPack('hungary', [
+  ['Hany Istók', 'Hanság lápi gyermeke', 'water', 'C', 'hum',
+   'A Hanság mocsaraiban nevelkedett lápi gyermek, aki tökéletesen tudott úszni és lélegezni a víz alatt.', {id:'hanyistok', rps:0.2}],
+  ['Fanyüvő Kölyök', 'A Fanyűvő alapformája', 'forest', 'C', 'beast',
+   'A Fanyűvő alapformája. Még csak a csemetéket rágcsálja, de a fák már most idegesen figyelik.', {id:'fanyuvokolyok', rps:0.2, evolvesTo:'fanyuvo'}],
+  ['Lidércfény', 'Magyar népi hiedelem', 'ghost', 'C', 'wisp',
+   'A mocsarak apró lángja, amely a hiedelem szerint a vándorokat csalogatja a mélybe. Azóta mindenki inkább a térképet követi.', {id:'lidercfeny', rps:0.1, evolvesTo:'liderc'}],
+  ['Mumus', 'Közös gyerekijesztő', 'ghost', 'C', 'hood',
+   'Az ágy alatt lakik, a szekrényben alszik. Ősi, bevált védekezés ellene: a takarót a fejre húzni.'],
+  ['Vízi Ember', 'Folyók mélyének lakója', 'water', 'C', 'hum',
+   'A néphit szerint zöld bőrű lény a folyók fenekén, aki a lelkeket edények alatt tartja. A vízdíjat viszont nem ő szedi.'],
+  ['Hortobágyi Délibáb', 'Alföldi jelenség', 'anomaly', 'C', 'wisp',
+   'A forró puszta felett lebegő tükörkép: a távoli kút néha a levegőben lóg. Nem szellem, csak a hőség hajlítja a fényt.'],
+  ['Garabonciás', 'Vándor varázsló diák', 'mystic', 'R', 'hood',
+   'Fekete felhőn érkező vándordiák. A hiedelem szerint egy rossz szava elég, hogy jégeső verje el a termést.'],
+  ['Táltos Paripa', 'Hősök csodalova', 'mystic', 'R', 'horned',
+   'A mesékben parazsat eszik, felhők fölött vágtat, és a gazdáját minden bajból kimenti. A mai lovak ennyit nem vállalnak.'],
+  ['Vasorrú Bába', 'Magyar mesék boszorkánya', 'earth', 'R', 'hood',
+   'A népmesék rettegett boszorkánya, akinek az orra tényleg vasból van. A reggeli tüsszentése állítólag hallatszik három faluig.'],
+  ['Tündér Ilona', 'Tündérszép Ilona', 'sky', 'R', 'hum',
+   'Szépségéről legendák szólnak: a mese szerint egyetlen mosolya egész birodalmakat győz meg. A hét ország legjobb TCG-lapja.'],
+  ['Hétfejű Sárkány', 'Mesék rettegett szörnye', 'mystic', 'U', 'dragon',
+   'Hét feje van, így hét helyen tud egyszerre reklamálni. A mesékben mindig a legkisebb fiú győzi le.'],
+  ['Csodaszarvas', 'Hun–magyar eredetmonda', 'forest', 'U', 'horned',
+   'A monda szerint a Meótisz mocsarai felé csalta a vadászokat, és ezzel kezdődött minden. Hatalmas agancsán csillagok ragyognak.'],
+  ['Turul', 'Mondabeli ragadozó madár', 'sky', 'U', 'bird',
+   'Emese álmában jelent meg, Álmos fejedelem anyja előtt, és a magyarok ősi jelképe lett. Repülni tud, GPS nélkül is.'],
+  ['Égigérő Fa', 'A világ tengelye', 'forest', 'S', 'tree',
+   'A magyar mesék fája, amely a felhők fölé nő, ágain a Nap és a Hold lakik. A legmagasabb kutatótorony a Földön.'],
+  /* csak evolúcióval szerezhető */
+  ['Mátranováki Fanyűvő', 'Magyar kriptid', 'forest', 'R', 'beast',
+   'A Mátrában észlelt, fura testalkatú lény, aki állítólag fák kérgét kaparássza éjszaka.', {id:'fanyuvo', rps:3, evoOnly:true}],
+  ['Lidérc', 'Magyar népi hiedelem', 'ghost', 'R', 'ghost',
+   'A lidércfény kifejlett alakja: a hiedelem szerint a ház kéményén át jár be, és kincset hoz – ha meg tudod tartani. Ritkán sikerül.', {id:'liderc', rps:3, evoOnly:true}]
+]);
+
+addPack('forest', [
+  ['Nagylábú', 'Bigfoot • Észak-Amerika', 'forest', 'C', 'hairy',
+   'A lábnyoma 40 cm hosszú, így a cipőboltok azóta is hiába keresik rá a méretet.', {id:'bigfoot', rps:0.2}],
+  ['Skunk Ape', 'Florida mocsarai', 'forest', 'C', 'hairy',
+   'A floridai nagylábú rokon, akit a szaga előz meg. A szemtanúk szerint büdös zokni és állatkert keveréke.'],
+  ['Yowie', 'Ausztrál bozótvidék', 'earth', 'C', 'hairy',
+   'Az ausztrál szőrös óriás, akiről az őslakos történetek régebb óta szólnak, mint az összes turistaösvény.'],
+  ['Hodag', 'Wisconsin, 1893', 'forest', 'C', 'horned',
+   'Tüskés hátú, agyaras szörny, amelyet egy tréfás fakitermelő talált ki 1893-ban. Azóta a város büszke maszkotja.'],
+  ['Jackalope', 'Amerikai Vadnyugat', 'earth', 'C', 'horned',
+   'Agancsos nyúl, akit a legenda szerint csak mennydörgéskor lehet látni. A mesék szerint whiskey-vel lehet csalogatni.'],
+  ['Fresno Nightcrawler', 'Kalifornia', 'earth', 'C', 'tall',
+   'Két hosszú lábon sétáló, fehér, nadrágszerű alak kaliforniai felvételeken. Az internet szerint egy nadrág, ami túl sokat látott.'],
+  ['Jersey Ördög', 'Pine Barrens, New Jersey', 'earth', 'R', 'dragon',
+   'A legenda szerint a 13. gyerek volt, aki ördöggé változott. Azóta a New Jersey-i erdők lakója és egy jégkorong-csapat névadója.'],
+  ['Dogman', 'Michigan', 'forest', 'R', 'beast',
+   'Két lábon járó, kutyafejű lény Michiganből. 1987-ben egy rádiós tréfa miatt lett híres, azóta saját dala is van.'],
+  ['Bray Road-i Fenevad', 'Wisconsin', 'forest', 'R', 'beast',
+   'Egy wisconsini útszakasz titokzatos farkasa, amelyet helyi újságcikkek tettek országosan híressé.'],
+  ['Fouke-i Szörny', 'Arkansas, 1971', 'forest', 'R', 'hairy',
+   'Az arkansasi Fouke-ban 1971-ben kapott hírnevet, egy család beszámolója után. Azóta saját horrorfilmje is van.'],
+  ['Wendigo', 'Algonquin legendák', 'forest', 'U', 'hood',
+   'A téli erdő soha jól nem lakó szelleme. A legenda szerint minél többet eszik, annál éhesebb lesz.'],
+  ['Wampus Cat', 'Appalache-i népmesék', 'forest', 'U', 'beast',
+   'Félig nő, félig puma: a cherokee mondák rejtélyes macskaasszonya. Állítólag a szemei sötétben világítanak, mint két kis lámpa.'],
+  ['Yeti', 'Himalája', 'earth', 'U', 'hairy',
+   'A Himalája hóembere. 1951-ben egy hegymászó lábnyomot fényképezett a hóban, azóta a világ kutatja a másik cipőjét.'],
+  ['Csupakabra', 'Chupacabra • Latin-Amerika', 'mystic', 'S', 'beast',
+   'A neve szó szerint „kecskeszívó”. Pedig a legtöbbször csak a kutyaeledelt lopkodja.', {id:'chupacabra', rps:12}]
+]);
+
+addPack('ghost', [
+  ['Poltergeist', 'Zajongó szellem • Németország', 'ghost', 'C', 'ghost',
+   'A szó jelentése „zajongó szellem”. Imádja a tányérokat, a fiókokat és a hajnali háromkor csöngő ajtócsengőt.'],
+  ['Fehér Hölgy', 'Kastélyok szelleme', 'ghost', 'C', 'ghost',
+   'Világszerte kastélyok lépcsőin sétál fehér ruhában. Szelfit ne kérj tőle: a kamera csak ködöt lát.'],
+  ['Fej Nélküli Lovas', 'Európai legendák', 'ghost', 'C', 'hood',
+   'A legenda szerint a fejét keresi. Már minden fejfedő boltot végigjárt, de a méretét még mindig nem találja.'],
+  ['Fantom Stoppos', 'Városi legenda', 'ghost', 'C', 'hum',
+   'Éjjel felvesz az út szélén egy utast, aki útközben elhallgat, majd a célnál nyomtalanul eltűnik. Legalább benzinpénzt nem kér.'],
+  ['Megszállt Baba', 'Kísértetjárta játékok', 'ghost', 'C', 'hum',
+   'A baba, amely mindig máshol ül, mint ahová tetted. A tudósok szerint a kisöcséd, a legenda szerint ő maga.'],
+  ['Árnyék a Szekrényben', 'Gyerekszobai rém', 'ghost', 'C', 'hood',
+   'Éjjel az ajtó mindig pár centire nyílik ki. A tudósok szerint a zsanér, a gyerekek szerint ő.'],
+  ['Banshee', 'Ír folklór', 'ghost', 'R', 'ghost',
+   'Sikolyával jelzi, hogy valaki meg fog halni a családban. Reggel mégis mindig a szomszéd macskáját gyanúsítják.'],
+  ['Fekete Szemű Gyerekek', 'Internetes városi legenda', 'ghost', 'R', 'hum',
+   'Udvariasan kopogtatnak, és bebocsátást kérnek, miközben a szemük teljesen fekete. A történet 1998-ban indult el az interneten.'],
+  ['Doppelgänger', 'Német folklór', 'ghost', 'R', 'hum',
+   'A „kettős járó”: ha meglátod a saját másodat, az a legenda szerint rossz jel. A tükörbe nézés innentől gyanús.'],
+  ['Dybbuk', 'Zsidó folklór', 'ghost', 'R', 'hood',
+   'Egy nyughatatlan lélek, amely beleköltözik valakibe. Egyszerűbb a bérleti szerződést felmondani.'],
+  ['Fekete Kutya', 'Black Shuck • Anglia', 'ghost', 'R', 'beast',
+   'Kelet-Anglia hatalmas, vörös szemű kísértetkutyája. Állítólag nem harap, csak nagyon nagy érdeklődéssel kísér.'],
+  ['Véres Mária', 'Tükörlegenda', 'ghost', 'U', 'ghost',
+   'Ha háromszor kimondod a nevét a sötét tükör előtt, megjelenik. A nyári táborok kedvenc ijesztgetős játéka.'],
+  ['Yūrei', 'Japán „halvány lélek”', 'ghost', 'U', 'ghost',
+   'Fehér ruhás, kócos hajú, lábak nélkül lebegő japán szellem. A régi festményeken sosem látni a lábát.'],
+  ['Repülő Holland', 'Tengerészlegenda', 'ghost', 'U', 'ghost',
+   'A szellemhajó, amely sosem fut be a kikötőbe. A matrózok szerint a legrosszabb sorsú vitorlás a világon.'],
+  ['Kaszás', 'A Halál megtestesítője', 'ghost', 'S', 'hood',
+   'Kapucnis, kaszás alak, aki sosem késik. A világ legpontosabb időgazdája, bár a névjegyét senki nem kapja meg.']
+]);
+
+addPack('urban', [
+  ['Csatornakrokodil', 'New York alatt', 'earth', 'C', 'beast',
+   'A legenda szerint a lefolyóba dobott kis aligátorok óriásira nőnek. A csatornák valójában kevésbé izgalmasak, de a mese kitart.'],
+  ['Horgoskezű', 'Amerikai városi legenda', 'ghost', 'C', 'hum',
+   'A parkoló kocsik rémtörténete: horog a kezén, horror a hangulatában. A legtöbb tinédzser azóta is tankol előre.'],
+  ['Hanako-san', 'Japán iskolai legenda', 'ghost', 'C', 'ghost',
+   'A harmadik emeleti mosdó harmadik fülkéjében lakik, és válaszol, ha háromszor kopogsz. Sokan inkább kihagyják a mosdót.'],
+  ['Zsákos Ember', 'Világszerte ismert rém', 'mystic', 'C', 'hood',
+   'Zsákkal járkáló gyerekijesztő, aki a rossz gyerekeket viszi el. Minden országban másképp hívják, de a zsák ugyanaz.'],
+  ['Nyuszi Ember', 'Bunny Man • Virginia', 'earth', 'C', 'hum',
+   'Egy virginiai híd alatt élő, nyúlfülű figura története. A hely azóta helyi legenda, a nyuszifül pedig kötelező.'],
+  ['Gonosz Bohóc', 'Phantom Clown • 1981', 'earth', 'C', 'hum',
+   '1981-ben amerikai városokban bohóc-pánik tört ki: gyerekek szerint furgonból les rájuk egy festett arc. Soha senkit nem fogtak el.'],
+  ['Kuchisake-onna', 'Japán városi legenda', 'ghost', 'R', 'ghost',
+   'A „felhasított szájú nő” maszkot visel, és megkérdezi: „Szép vagyok?” A legenda szerint a jó válasz: „Átlagos.”'],
+  ['Pörgőrugós Jack', 'Spring-Heeled Jack • London', 'earth', 'R', 'tall',
+   'A viktoriánus London tetőin ugráló alak az 1830-as évekből. A legenda szerint lángot lehelt, és óriásokat ugrott.'],
+  ['Teke-teke', 'Japán városi legenda', 'ghost', 'R', 'ghost',
+   'A vasúton kettévált lány szelleme, aki csúszva közeledik. Nevét a hangjáról kapta, a hallás miatt mégis jobb elfutni.'],
+  ['Rake', 'Internetes creepypasta, 2005', 'anomaly', 'R', 'hum',
+   'Egy 2005-ös internetes történet sápadt, éjszakai látogatója. Azóta is mindenki a hálószoba sarkát vizsgálja lefekvés előtt.'],
+  ['Mattoon-i Gázfantom', 'Illinois, 1944', 'anomaly', 'R', 'hood',
+   '1944-ben egy illinoisi kisvárosban többen betegítő gázzal támadó alakról számoltak be. A rendőrség tömeghisztériára gyanakodott.'],
+  ['Slenderman', 'Internetes legenda, 2009', 'mystic', 'U', 'tall',
+   '2009-ben egy fórumon született fotómontázsokból. Mára a legismertebb modern kriptid-mém, pedig arca sincs.'],
+  ['La Llorona', 'Mexikói „síró asszony”', 'ghost', 'U', 'ghost',
+   'A folyópartokon járva keresi elveszett gyermekeit. Neki köszönhető, hogy a gyerekek sötétedésre hazaérnek.'],
+  ['Backrooms Lakó', 'Internetes mém, 2019', 'anomaly', 'U', 'alien',
+   'A végtelen, sárga irodatermek lakója. Senki sem tudja, hol van, mégis mindenki elveszett benne.'],
+  ['Kalapos Árnyékember', 'Hat Man • Paranormális', 'ghost', 'S', 'hood',
+   'Kalapos, fekete árnyalak, amelyet álmatlan éjszakák során látnak. Ritka lap: nagyon jól bújócskázik.']
+]);
+
+addPack('sea', [
+  ['Kappa', 'Japán vízi szellem', 'water', 'C', 'hum',
+   'A fején vízzel teli tányér van. Ha meghajolsz előtte, ő is visszahajol, a víz kiömlik, és elgyengül. Udvariasság: a legjobb fegyver.'],
+  ['Selkie', 'Skót fókaszellem', 'water', 'C', 'hum',
+   'Fókabőrét levetve emberré változik. A legenda szerint a bőr elrejtése a legnagyobb hiba, amit tehetsz.'],
+  ['Sellő', 'Tengeri legenda', 'water', 'C', 'serp',
+   'Félig ember, félig hal. A tengerészek szerint dalával a hajókat is elcsábítja, a lábujjkörmöt viszont sosem kell vágnia.'],
+  ['Tengeri Kígyó', 'Tengerészek meséje', 'water', 'C', 'serp',
+   'A hullámok közt kígyózó óriás: a tengerészek évszázadok óta látják. Gyakran kiderült, hogy csak egy hosszú hullám volt.'],
+  ['Harpia', 'Görög mitológia', 'sky', 'C', 'bird',
+   'Szárnyas, női arcú madár, amely a mondák szerint elrabolja az ételt az asztalról. Mai változata a galamb.'],
+  ['Hippokampusz', 'Görög mitológia', 'water', 'C', 'beast',
+   'Félig ló, félig hal: Poszeidón kocsiját húzza. A csikóhalak a mai napig büszkék a rokonságra.'],
+  ['Molyember', 'Mothman • Point Pleasant', 'sky', 'R', 'mothman',
+   'Úgy odavan a lámpafényért, mint egy közönséges moly. A kerti lámpák körül a leggyakoribb.', {id:'mothman', rps:2}],
+  ['Ogopogo', 'Okanagan-tó, Kanada', 'water', 'R', 'serp',
+   'A kanadai Okanagan-tó híres lakója. Saját szobra és emléktárgyai is vannak, tehát biztosan létezik, nem?'],
+  ['Champ', 'Champlain-tó, USA', 'water', 'R', 'serp',
+   'A Champlain-tó szörnye. A 19. századi cirkuszkirály, P. T. Barnum állítólag jutalmat ajánlott a bőréért.'],
+  ['Mokele-mbembe', 'Kongó-medence', 'water', 'R', 'beast',
+   'A kongói folyók szauropoda-szerű lénye. A dinoszaurusz-rajongók kedvence, a kutatóké a távoli rémálma.'],
+  ['Bunyip', 'Ausztrál őslakos legenda', 'water', 'R', 'beast',
+   'Az ausztrál lagúnák rejtélyes lakója. A neve „szellem” vagy „ördög” jelentésű, ezért a helyiek nem fürdenek egyedül a sötét vízben.'],
+  ['Nessie', 'Loch Ness-i Szörny', 'water', 'U', 'nessie',
+   'Évszázadok óta bújócskázik az emberekkel, és mindig nyer: a tó 230 méter mély.', {id:'nessie', rps:5}],
+  ['Kraken', 'Skandináv tengeri óriás', 'water', 'U', 'eye',
+   'Csápjaival egész hajókat húz a mélybe. Valódi rokona az óriáskalmár, aki szerencsére fél az emberektől.'],
+  ['Thunderbird', 'Észak-amerikai őslakos legenda', 'sky', 'U', 'bird',
+   'Villámszárnyú óriásmadár: a mennydörgést a szárnycsapásairól mondják. A legjobb vihar-előrejelző.'],
+  ['Leviatán', 'Ősi tengeri szörny', 'water', 'S', 'dragon',
+   'A Bibliában is szereplő tengeri szörny. A neve azóta minden gigantikus dolog szinonimája.'],
+  ['Roc', 'Az Ezeregyéjszaka óriásmadara', 'sky', 'S', 'bird',
+   'Az Ezeregyéjszaka meséi szerint elefántot is felkap. Marco Polo állítólag látott egy tollat belőle.']
+]);
+
+addPack('myth', [
+  ['Troll', 'Skandináv hegylakó', 'earth', 'C', 'hairy',
+   'A skandináv hegyek óriása. A legenda szerint a napfény kővé változtatja, ezért a legjobb éjjeli műszakos.'],
+  ['Kobold', 'Német házimanó', 'earth', 'C', 'hum',
+   'Segít a ház körül, ha tisztelettel bánsz vele. Ha nem, összekötözi a cipőfűződet, és eldugja a kulcsot.'],
+  ['Kentaur', 'Görög mitológia', 'earth', 'C', 'beast',
+   'Ló teste, ember felsőteste. A mondák szerint Kheirón kivételével elég vad társaság.'],
+  ['Minotaurusz', 'Krétai labirintus', 'earth', 'C', 'horned',
+   'Bikafejű lény a labirintus közepén. A navigáció nélküli ember örök rémálma.'],
+  ['Oni', 'Japán ogre', 'mystic', 'C', 'horned',
+   'Buzogányos, szarvas japán szörny. Babdobálással ijesztik el őket, és ez meglepően jól működik.'],
+  ['Vérfarkas', 'Európai legendák', 'forest', 'C', 'beast',
+   'Telihold idején átváltozik. A kutyaszőr-allergiás barátok szerint ez minden hónapban ugyanaz.'],
+  ['Baba Jaga', 'Szláv népmesék', 'mystic', 'R', 'hood',
+   'Csirkelábon forgó kunyhóban lakik. A mese szerint úgy kell megszólítani: „Fordulj hátoddal az erdő, szemeddel felém!”'],
+  ['Szfinx', 'Egyiptomi és görög mítosz', 'earth', 'R', 'beast',
+   'Rejtvényt ad fel: reggel négy, délben kettő, este három lábon jár. A válasz az ember, a díj a túlélés.'],
+  ['Medúza', 'Görög mitológia', 'mystic', 'R', 'hum',
+   'Kígyóhajú gorgó, akinek tekintete kővé tesz. Perszeusz tükörpajzsa az első szelfi-ellenes védelem.'],
+  ['Golem', 'Prágai legenda', 'earth', 'R', 'hum',
+   'Agyagból formált óriás, akinek homlokára szót írnak, hogy éljen. A legenda szerint Rabbi Löw készítette.'],
+  ['Kitsune', 'Japán rókaszellem', 'mystic', 'R', 'beast',
+   'Rókaszellem, amely minden évszázaddal egy újabb farkat kap, egészen kilencig. A legdúsabb farok a világon.'],
+  ['Tengu', 'Japán hegyi szellem', 'sky', 'R', 'bird',
+   'Hosszú orrú, szárnyas hegyi szellem. A legenda szerint a legjobb kardmesterek tanára.'],
+  ['Főnix', 'Tűzmadár', 'sky', 'U', 'bird',
+   'Hamvaiból születik újjá, ötszáz évenként. Ha elromlik a telefonod, az ő módszerét ajánljuk: újraindítás.'],
+  ['Hidra', 'Lernai vízi szörny', 'water', 'U', 'dragon',
+   'Ha levágsz egy fejét, kettő nő helyette. A számlák is így működnek.'],
+  ['Kerberosz', 'Az alvilág őrkutyája', 'ghost', 'U', 'beast',
+   'Háromfejű kutya, aki az alvilág kapuját őrzi. A mondák szerint kolbásszal vagy altatódallal le lehet nyugtatni.'],
+  ['Fenrir', 'Skandináv óriásfarkas', 'ghost', 'S', 'beast',
+   'Láncát a törpék kovácsolták hat lehetetlen dologból, köztük macskalábzajból és nők szakállából. Ragnarökkor kiszabadul.'],
+  ['Jörmungandr', 'A világkígyó', 'water', 'S', 'dragon',
+   'Az óceán fenekén körbefonja a világot, és a farkába harap. Ha elengedi, eljön a Ragnarök.']
+]);
+
+addPack('anomaly', [
+  ['Szürke Ember', 'Klasszikus ufólény', 'anomaly', 'C', 'alien',
+   'A nagy fejű, nagy szemű humanoid a Roswell-legenda óta minden ufós történet sztárja.'],
+  ['Gömbvillám', 'Természeti rejtély', 'anomaly', 'C', 'wisp',
+   'Lebegő, izzó villámgömb, amelyet tudósok is megfigyeltek. Laborban csak ritkán sikerült előállítani.'],
+  ['Marfa-fények', 'Texas, USA', 'anomaly', 'C', 'wisp',
+   'Texasi sivatagi fények, amelyeket a 19. század óta látnak. A kutatók autólámpákra gyanakodnak, a turisták tábort vernek.'],
+  ['Hessdalen-fény', 'Norvégia', 'anomaly', 'C', 'wisp',
+   'Egy norvég völgy rejtélyes fényei. A jelenséget saját mérőállomás figyeli, mégsem tudják pontosan megmagyarázni.'],
+  ['Taos-zúgás', 'Új-Mexikó', 'anomaly', 'C', 'eye',
+   'Mélyen zúgó hang, amelyet a lakosság egy kis része hall. A forrása a mai napig ismeretlen.'],
+  ['Időutazó Turista', 'Chaplin-film, 1928', 'anomaly', 'C', 'hum',
+   'Egy 1928-as filmjelenetben egy nő a füléhez tart valamit, mintha telefonálna. A legtöbb szakértő szerint hallókészülék volt.'],
+  ['Philadelphia-kísérlet', 'USS Eldridge, 1943', 'anomaly', 'R', 'hood',
+   'A legenda szerint egy hadihajót láthatatlanná tettek 1943-ban. Az amerikai haditengerészet szerint soha nem történt meg.'],
+  ['Wow! Jel', 'Rádiótávcső, 1977', 'anomaly', 'R', 'eye',
+   '1977-ben a Big Ear rádiótávcső 72 másodpercig erős jelet fogott. A kutató a nyomtatványra csak annyit írt: „Wow!”'],
+  ['Mongol Halálféreg', 'Góbi sivatag', 'anomaly', 'R', 'serp',
+   'Az olgoj-chorchoj, vagyis „béléféreg” a Góbi homokjában él. A legenda szerint mérget köp, és áramot termel.'],
+  ['Bloop', 'Mélytengeri hangjel, 1997', 'water', 'R', 'eye',
+   '1997-ben egy óriási hangot mértek az óceánban, amelyet sokan élőlénynek hittek. A kutatók szerint jégtörés okozta.'],
+  ['Fekete Ruhás Férfiak', 'Ufós legendák', 'anomaly', 'R', 'hood',
+   'Ufó-szemtanúkat látogató sötét öltönyös, furcsán viselkedő alakok. Mindig tökéletesen szabott a ruhájuk.'],
+  ['Woolpit Zöld Gyerekei', 'Anglia, 12. század', 'anomaly', 'U', 'hum',
+   'Egy 12. századi angol legenda szerint két zöld bőrű gyerek bukkant fel egy faluban. Idegen nyelven beszéltek, és csak babot ettek.'],
+  ['Utahi Monolit', 'Utah, 2020', 'anomaly', 'U', 'tall',
+   '2020-ban egy utahi sivatagban fényes fémoszlopot találtak. Néhány nap múlva eltűnt, ahogy jött.'],
+  ['Tunguszka-esemény', 'Szibéria, 1908', 'anomaly', 'U', 'wisp',
+   '1908-ban egy szibériai erdő felett felrobbant egy égitest. Kétezer négyzetkilométernyi fát döntött ki.'],
+  ['Bermuda-háromszög', 'Atlanti-óceán', 'anomaly', 'S', 'eye',
+   'Az óceán régiója, ahol a legenda szerint hajók és repülők tűnnek el. A statisztikák szerint nem többet, mint máshol.'],
+  ['Voynich-kézirat', '15. századi rejtély', 'mystic', 'S', 'eye',
+   'Ismeretlen nyelven írt, különös növényekkel és csillagtérképekkel teli könyv. Kódfejtők évszázadok óta nem tudták megfejteni.']
+]);
+
+/* ================= PROCEDURÁLIS ILLUSZTRÁCIÓK =================
+   A kézzel rajzolt lények (CUSTOM_SVG) megmaradnak, az új lényeket
+   archetípus + típus-paletta + a névből számolt véletlen alapján rajzoljuk. */
+function mulberry(seed){
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const PAL = {
+  forest: {h:130, eye:'#d9ff5a', acc:'#6dff9b'},
+  sky:    {h:215, eye:'#ff4a4a', acc:'#7cc8ff'},
+  water:  {h:178, eye:'#aaf6ee', acc:'#58ffe9'},
+  mystic: {h:275, eye:'#ffe84a', acc:'#d2a4ff'},
+  ghost:  {h:232, eye:'#d6e4ff', acc:'#c4ccff'},
+  anomaly:{h:28,  eye:'#ff5a2a', acc:'#ffc861'},
+  earth:  {h:48,  eye:'#ffcf5a', acc:'#e6dd9a'}
+};
+
+function eyes(x1, y1, x2, y2, rad, col){
+  return `<circle cx="${x1}" cy="${y1}" r="${rad * 2.1}" fill="${col}" opacity=".22"/>`
+       + `<circle cx="${x2}" cy="${y2}" r="${rad * 2.1}" fill="${col}" opacity=".22"/>`
+       + `<circle cx="${x1}" cy="${y1}" r="${rad}" fill="${col}"/>`
+       + `<circle cx="${x2}" cy="${y2}" r="${rad}" fill="${col}"/>`;
+}
+
+/* ---- háttér típusonként ---- */
+function artBg(type, r, P){
+  const moon = `<circle cx="${r() > .5 ? 80 : 20}" cy="17" r="${7 + r() * 3}" fill="#f2f6ff" opacity=".8"/>`;
+  switch (type) {
+    case 'forest':
+      return moon
+        + `<polygon points="-4,100 12,40 28,100" fill="#08301a"/><polygon points="72,100 88,34 104,100" fill="#08301a"/>`
+        + `<polygon points="2,100 20,52 38,100" fill="#0b4426" opacity=".9"/><polygon points="64,100 80,54 98,100" fill="#0b4426" opacity=".9"/>`;
+    case 'sky': {
+      let st = '';
+      for (let i = 0; i < 9; i++) st += `<circle cx="${(r() * 96 + 2).toFixed(1)}" cy="${(r() * 60 + 3).toFixed(1)}" r="${(0.7 + r() * 1.1).toFixed(1)}" fill="#fff"/>`;
+      return st + moon + `<ellipse cx="22" cy="88" rx="30" ry="9" fill="#cfe6ff" opacity=".14"/><ellipse cx="80" cy="92" rx="34" ry="10" fill="#cfe6ff" opacity=".14"/>`;
+    }
+    case 'water':
+      return moon + `<path d="M0 62 Q25 54 50 62 T100 62 V100 H0Z" fill="#0a4a55" opacity=".6"/>`;
+    case 'mystic':
+      return `<circle cx="50" cy="50" r="34" fill="none" stroke="${P.acc}" stroke-width=".8" opacity=".6"/>`
+        + `<circle cx="50" cy="50" r="26" fill="none" stroke="${P.acc}" stroke-width=".6" opacity=".4" stroke-dasharray="3 3"/>`
+        + `<polygon points="50,14 59,40 86,40 64,56 72,82 50,66 28,82 36,56 14,40 41,40" fill="none" stroke="${P.acc}" stroke-width=".7" opacity=".5"/>`
+        + `<circle cx="14" cy="14" r="1.2" fill="#fff"/><circle cx="88" cy="20" r="1.4" fill="#fff"/><circle cx="84" cy="86" r="1" fill="#fff"/>`;
+    case 'ghost':
+      return moon + `<rect x="8" y="76" width="10" height="16" rx="5" fill="#0b0e22" opacity=".8"/><rect x="82" y="72" width="10" height="20" rx="5" fill="#0b0e22" opacity=".8"/>`
+        + `<ellipse cx="50" cy="90" rx="52" ry="10" fill="#e8eeff" opacity=".12"/>`;
+    case 'anomaly':
+      return `<polygon points="40,0 60,0 82,100 18,100" fill="#fff" opacity=".07"/>`
+        + `<circle cx="50" cy="52" r="40" fill="none" stroke="${P.acc}" stroke-width=".7" opacity=".35"/>`
+        + `<circle cx="50" cy="52" r="29" fill="none" stroke="${P.acc}" stroke-width=".7" opacity=".3"/>`
+        + `<circle cx="14" cy="22" r="1.3" fill="${P.acc}"/><circle cx="86" cy="30" r="1.1" fill="${P.acc}"/><circle cx="76" cy="84" r="1.3" fill="${P.acc}"/>`;
+    default: // earth
+      return moon + `<polygon points="0,78 22,52 40,72 62,46 82,70 100,58 100,100 0,100" fill="#2a2614" opacity=".85"/>`
+        + `<polygon points="0,92 26,74 54,90 78,76 100,88 100,100 0,100" fill="#3a3419"/>`;
+  }
+}
+function artFg(type){
+  if (type === 'water') {
+    return `<path d="M0 78 Q12 70 25 78 T50 78 T75 78 T100 78 V100 H0Z" fill="#0d7d86" opacity=".9"/>`
+         + `<path d="M0 90 Q12 83 25 90 T50 90 T75 90 T100 90 V100 H0Z" fill="#095a64"/>`;
+  }
+  if (type === 'ghost') return `<ellipse cx="50" cy="98" rx="60" ry="9" fill="#dfe8ff" opacity=".2"/>`;
+  if (type === 'forest') return `<rect x="0" y="94" width="100" height="6" fill="#06200f"/>`;
+  return '';
+}
+
+/* ---- archetípusok (100×100-as vászon) ---- */
+const ARCH = {
+  hum: c => `<ellipse cx="50" cy="72" rx="19" ry="26" fill="${c.B}"/>
+    <path d="M33 56 Q22 70 24 90 M67 56 Q78 70 76 90" stroke="${c.B}" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <circle cx="50" cy="38" r="13" fill="${c.B2}"/>${eyes(43.5, 37, 56.5, 37, 2.8, c.E)}
+    <path d="M45 46 Q50 49 55 46" stroke="#05060d" stroke-width="1.3" fill="none" stroke-linecap="round"/>`,
+
+  hairy: c => `<ellipse cx="50" cy="70" rx="23" ry="28" fill="${c.B}"/>
+    <path d="M28 52 Q14 72 20 92 M72 52 Q86 72 80 92" stroke="${c.B}" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <polygon points="34,34 36,20 42,28 47,16 51,26 56,16 59,28 65,20 66,34" fill="${c.B}"/>
+    <circle cx="50" cy="38" r="12.5" fill="${c.B2}"/><ellipse cx="50" cy="43" rx="7" ry="5.5" fill="${c.L}" opacity=".55"/>
+    ${eyes(44, 36, 56, 36, 2.5, c.E)}<path d="M46 45 Q50 48 54 45" stroke="#05060d" stroke-width="1.2" fill="none"/>`,
+
+  tall: c => `<rect x="46" y="32" width="8" height="58" rx="3" fill="${c.B}"/>
+    <ellipse cx="50" cy="23" rx="7" ry="9.5" fill="#e9e9f2"/>
+    <path d="M47 37 Q30 52 24 80 M53 37 Q70 52 76 80 M47 42 Q36 62 38 86 M53 42 Q64 62 62 86" stroke="${c.B}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M50 34 v28" stroke="#e9e9f2" stroke-width="1.2"/><circle cx="50" cy="23" r="16" fill="${c.E}" opacity=".08"/>`,
+
+  beast: c => `<path d="M20 58 Q8 52 8 40" stroke="${c.B}" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="46" cy="62" rx="26" ry="14" fill="${c.B}"/>
+    <rect x="26" y="68" width="5.5" height="22" rx="2.5" fill="${c.B}"/><rect x="36" y="70" width="5.5" height="22" rx="2.5" fill="${c.B}"/>
+    <rect x="56" y="70" width="5.5" height="22" rx="2.5" fill="${c.B}"/><rect x="66" y="68" width="5.5" height="22" rx="2.5" fill="${c.B}"/>
+    <polygon points="60,54 70,40 78,58 62,68" fill="${c.B}"/>
+    <circle cx="76" cy="47" r="11" fill="${c.B2}"/><ellipse cx="86" cy="52" rx="7" ry="4.5" fill="${c.B2}"/>
+    <polygon points="68,40 66,27 75,36" fill="${c.B2}"/><polygon points="78,37 81,26 86,38" fill="${c.B2}"/>
+    <circle cx="79" cy="46" r="5" fill="${c.E}" opacity=".25"/><circle cx="79" cy="46" r="2.4" fill="${c.E}"/>
+    <path d="M82 56 l2 4 l2 -4" stroke="#fff" stroke-width="1" fill="#fff"/>`,
+
+  horned: c => ARCH.beast(c)
+    + `<path d="M71 38 Q65 24 73 17 M81 37 Q89 23 82 15" stroke="${c.L}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`,
+
+  bird: c => `<path d="M50 52 L3 22 L16 56 L6 74 L38 66Z" fill="${c.B}" stroke="${c.A}" stroke-width=".8"/>
+    <path d="M50 52 L97 22 L84 56 L94 74 L62 66Z" fill="${c.B}" stroke="${c.A}" stroke-width=".8"/>
+    <path d="M50 54 L20 34 M50 58 L14 56 M50 62 L26 68 M50 54 L80 34 M50 58 L86 56 M50 62 L74 68" stroke="${c.A}" stroke-width=".7" fill="none" opacity=".7"/>
+    <ellipse cx="50" cy="62" rx="9" ry="21" fill="${c.B2}"/><circle cx="50" cy="36" r="8.5" fill="${c.B2}"/>
+    <polygon points="45,38 55,38 50,50" fill="${c.L}"/>${eyes(46, 33, 54, 33, 2.2, c.E)}`,
+
+  serp: c => `<path d="M30 90 C20 62 38 32 62 36" stroke="${c.B2}" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <ellipse cx="66" cy="35" rx="9.5" ry="6" fill="${c.B2}" transform="rotate(12 66 35)"/>
+    <circle cx="71" cy="33" r="2.2" fill="${c.E}"/><circle cx="71" cy="33" r="4.6" fill="${c.E}" opacity=".25"/>
+    <circle cx="72" cy="82" r="11" fill="${c.B}"/><circle cx="88" cy="84" r="8" fill="${c.B}"/>`,
+
+  ghost: c => `<path d="M28 92 V46 Q28 16 50 16 Q72 16 72 46 V92 L64 83 L57 92 L50 83 L43 92 L36 83 Z" fill="#e9ecff" opacity=".92"/>
+    <path d="M28 92 V46 Q28 16 50 16" fill="none" stroke="${c.A}" stroke-width=".8" opacity=".6"/>
+    <ellipse cx="42" cy="42" rx="4.2" ry="6.5" fill="#06070f"/><ellipse cx="58" cy="42" rx="4.2" ry="6.5" fill="#06070f"/>
+    <circle cx="42" cy="43" r="1.6" fill="${c.E}"/><circle cx="58" cy="43" r="1.6" fill="${c.E}"/>
+    <ellipse cx="50" cy="58" rx="4.5" ry="7" fill="#06070f"/>`,
+
+  wisp: (c, r) => {
+    let sp = '';
+    for (let i = 0; i < 10; i++) sp += `<circle cx="${(14 + r() * 72).toFixed(1)}" cy="${(24 + r() * 56).toFixed(1)}" r="${(0.7 + r() * 1.4).toFixed(1)}" fill="#fff" opacity="${(0.5 + r() * 0.5).toFixed(2)}"/>`;
+    return `<circle cx="50" cy="52" r="32" fill="${c.E}" opacity=".10"/><circle cx="50" cy="52" r="21" fill="${c.E}" opacity=".2"/>
+    <circle cx="50" cy="52" r="12" fill="${c.E}" opacity=".6"/><circle cx="50" cy="52" r="6" fill="#fff"/>
+    <path d="M50 58 Q44 78 36 92" stroke="${c.E}" stroke-width="3" fill="none" opacity=".3" stroke-linecap="round"/>` + sp;
+  },
+
+  dragon: c => `<path d="M50 50 L4 18 L16 50 L8 72 L38 62Z" fill="${c.B}" stroke="${c.A}" stroke-width=".8"/>
+    <path d="M50 50 L96 18 L84 50 L92 72 L62 62Z" fill="${c.B}" stroke="${c.A}" stroke-width=".8"/>
+    <path d="M22 92 C14 66 46 70 52 52" stroke="${c.B2}" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <polygon points="46,34 70,26 82,38 60,46" fill="${c.B2}"/>
+    <path d="M52 32 Q46 20 40 22 M62 28 Q62 14 70 12" stroke="${c.L}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <circle cx="68" cy="34" r="2.3" fill="${c.E}"/><circle cx="68" cy="34" r="5" fill="${c.E}" opacity=".25"/>
+    <path d="M80 40 q8 3 12 -1 q-3 6 -12 5Z" fill="${c.A}" opacity=".85"/>`,
+
+  tree: c => `<path d="M42 100 L44 56 L56 56 L58 100Z" fill="${c.B}"/>
+    <path d="M44 100 Q36 94 30 98 M58 100 Q66 94 72 98" stroke="${c.B}" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <circle cx="30" cy="38" r="17" fill="${c.B2}"/><circle cx="70" cy="38" r="17" fill="${c.B2}"/><circle cx="50" cy="26" r="19" fill="${c.B2}"/>
+    <circle cx="50" cy="46" r="15" fill="${c.B}"/>${eyes(44, 70, 56, 70, 2.4, c.E)}
+    <path d="M46 78 Q50 81 54 78" stroke="#05060d" stroke-width="1.3" fill="none"/>`,
+
+  alien: c => `<path d="M50 62 V80 M38 90 Q50 66 62 90" stroke="#aebaa8" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="50" cy="40" rx="15" ry="19" fill="#aebaa8"/>
+    <ellipse cx="42.5" cy="43" rx="4.6" ry="8" fill="#05060d" transform="rotate(-20 42.5 43)"/>
+    <ellipse cx="57.5" cy="43" rx="4.6" ry="8" fill="#05060d" transform="rotate(20 57.5 43)"/>
+    <circle cx="41" cy="40" r="1.2" fill="#fff"/><circle cx="59" cy="40" r="1.2" fill="#fff"/>
+    <circle cx="50" cy="40" r="26" fill="${c.E}" opacity=".07"/>`,
+
+  eye: (c, r) => {
+    let rays = '';
+    for (let i = 0; i < 12; i++) {
+      const a = i / 12 * Math.PI * 2;
+      rays += `<line x1="${(50 + Math.cos(a) * 38).toFixed(1)}" y1="${(50 + Math.sin(a) * 24).toFixed(1)}" x2="${(50 + Math.cos(a) * 46).toFixed(1)}" y2="${(50 + Math.sin(a) * 30).toFixed(1)}" stroke="${c.A}" stroke-width="1" opacity=".6"/>`;
+    }
+    return rays + `<ellipse cx="50" cy="50" rx="34" ry="21" fill="#0b0d1b" stroke="${c.A}" stroke-width="1.4"/>
+    <circle cx="50" cy="50" r="15" fill="${c.E}"/><circle cx="50" cy="50" r="7" fill="#05060d"/>
+    <circle cx="45" cy="45" r="2.4" fill="#fff"/><circle cx="50" cy="50" r="22" fill="${c.E}" opacity=".12"/>`;
+  },
+
+  hood: c => `<path d="M50 14 Q28 18 26 56 L16 94 L84 94 L74 56 Q72 18 50 14Z" fill="${c.B}"/>
+    <path d="M50 14 Q28 18 26 56" fill="none" stroke="${c.A}" stroke-width=".8" opacity=".5"/>
+    <ellipse cx="50" cy="38" rx="11" ry="14" fill="#02030a"/>${eyes(45.5, 37, 54.5, 37, 2.1, c.E)}
+    <path d="M30 70 Q50 62 70 70" stroke="${c.A}" stroke-width=".7" fill="none" opacity=".4"/>`
+};
+
+const ART_CACHE = {};
+function artSVG(def){
+  if (CUSTOM_SVG[def.id]) return CUSTOM_SVG[def.id];
+  if (ART_CACHE[def.id]) return ART_CACHE[def.id];
+  const r = mulberry(hash(def.id));
+  const P = PAL[def.type] || PAL.mystic;
+  const hh = Math.round(P.h + (r() - .5) * 36);
+  const c = {
+    B:  `hsl(${hh},${28 + Math.round(r() * 12)}%,${13 + Math.round(r() * 6)}%)`,
+    B2: `hsl(${hh},${30 + Math.round(r() * 10)}%,${24 + Math.round(r() * 6)}%)`,
+    L:  `hsl(${hh},36%,72%)`,
+    E:  P.eye, A: P.acc
+  };
+  const fn = ARCH[def.art] || ARCH.hum;
+  const flip = (def.art !== 'tall' && def.art !== 'tree' && def.art !== 'hood' && r() > .5) ? ' transform="translate(100 0) scale(-1 1)"' : '';
+  const svg = `<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">`
+    + artBg(def.type, r, P) + `<g${flip}>` + fn(c, r) + `</g>` + artFg(def.type) + `</svg>`;
+  return (ART_CACHE[def.id] = svg);
+}
+
+/* ================= ADATBÁZIS FELDOLGOZÁS ================= */
+const CARDS = DB;
+const CARD_BY_ID = Object.fromEntries(CARDS.map(c => [c.id, c]));
+CARDS.forEach((c, i) => {
+  c.no = i + 1;                                   // album sorszám
+  if (c.evolvesTo && CARD_BY_ID[c.evolvesTo]) CARD_BY_ID[c.evolvesTo].from = c.id;
+});
+const POOL = {};                                  // csomag → húzható kártyák
+PACKS.forEach(p => { POOL[p.id] = CARDS.filter(c => c.pack === p.id && !c.evoOnly); });
+
+/* ================= ÁLLAPOT ================= */
+// col[id] = { n: példányok száma (= szint), seen: már kinyitva }
+let state = { rp:0, clicks:0, packs:0, col:{}, lastSave:Date.now() };
+let busy = false;
+let lastTick = performance.now();
+let binderPage = 0;
+let filter = 'all';
+let ownedOnly = false;
+let modalId = null;
+
+const $ = id => document.getElementById(id);
+const fmt = n => Math.floor(n).toLocaleString('hu-HU');
+const fmtRps = n => n.toLocaleString('hu-HU', {maximumFractionDigits:2});
+
+function getRps(){
+  let s = 0;
+  for (const id in state.col) {
+    const d = CARD_BY_ID[id], e = state.col[id];
+    if (d && e) s += d.rps * e.n;
+  }
+  return s;
+}
+const canEvolve = id => {
+  const d = CARD_BY_ID[id], e = state.col[id];
+  return !!(d && d.evolvesTo && e && e.n >= EVO_COST);
+};
+const isSeen = id => !!(state.col[id] && state.col[id].seen);
+const countSeen = list => list.reduce((a, c) => a + (isSeen(c.id) ? 1 : 0), 0);
+
+/* esély egy konkrét kártyára (egy húzásnál, a saját csomagjában) */
+function chanceOf(def){
+  const same = POOL[def.pack].filter(c => c.rarity === def.rarity).length;
+  return same ? RARITY[def.rarity].chance / same : 0;
+}
+
+/* ================= MENTÉS ================= */
+function normalizeCol(col){
+  const out = {};
+  if (!col || typeof col !== 'object') return out;
+  for (const id in col) {
+    if (!CARD_BY_ID[id]) continue;
+    const v = col[id];
+    if (typeof v === 'number') out[id] = { n: Math.max(0, v | 0), seen: v > 0 };
+    else if (v && typeof v === 'object') {
+      const n = Math.max(0, v.n | 0);
+      out[id] = { n, seen: !!v.seen || n > 0 };
+    }
+  }
+  return out;
+}
+function save(){
+  state.lastSave = Date.now();
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+function load(){
+  try {
+    let raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) for (const k of OLD_KEYS) { raw = localStorage.getItem(k); if (raw) break; }
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (!s || typeof s !== 'object') return;
+    state.rp = Number(s.rp) || 0;
+    state.clicks = Number(s.clicks) || 0;
+    state.packs = Number(s.packs) || 0;
+    state.col = normalizeCol(s.col);
+    state.lastSave = Number(s.lastSave) || Date.now();
+    const secs = Math.min((Date.now() - state.lastSave) / 1000, 8 * 3600);
+    const gain = getRps() * secs;
+    if (gain >= 1) {
+      state.rp += gain;
+      setTimeout(() => toast(`Amíg távol voltál, a lényeid ${fmt(gain)} RP-t gyűjtöttek!`), 600);
+    }
+  } catch (e) {}
+}
+
+/* ================= KÁRTYA HTML ================= */
+function cardHTML(def, n, locked){
+  const r = RARITY[def.rarity], t = TYPES[def.type], pk = PACK_BY_ID[def.pack];
+  const evolved = !!def.from;
+  const stageTxt = evolved ? 'STAGE 1' : 'BASIC';
+  if (locked) {
+    let hint;
+    if (def.evoOnly) hint = `Csak evolúcióval szerezhető: ${CARD_BY_ID[def.from] ? CARD_BY_ID[def.from].name : '?'} ×${EVO_COST}.`;
+    else hint = `${pk.icon} ${pk.name} csomagból húzható. Esély: ${chanceOf(def).toLocaleString('hu-HU', {maximumFractionDigits:1})}%`;
+    return `<div class="card locked ${r.cls} t-${def.type}">
+      <div class="inner">
+        <div class="c-head"><div class="c-name">???</div><div class="c-sub">Ismeretlen kriptid</div></div>
+        <div class="c-art">${artSVG(def)}</div>
+        <div class="c-meta"><span class="chip type">${t.icon} ${t.label}</span><span class="chip rar ${def.rarity}">${r.label}</span></div>
+        <div class="c-fun"><b>FUNFACT</b>Még nem fedezted fel. ${hint}</div>
+        <div class="c-foot"><span class="lvl">Lv.0</span><span class="rps">+? RP/s</span></div>
+      </div><div class="shine"></div></div>`;
+  }
+  return `<div class="card ${r.cls} t-${def.type}" data-id="${def.id}">
+    <div class="inner">
+      <div class="c-head"><div class="c-name">${def.name}</div><div class="c-sub">${def.sub}</div></div>
+      <div class="c-art"><span class="stageTag ${evolved ? 's1' : ''}">${stageTxt}</span>${artSVG(def)}</div>
+      <div class="c-meta"><span class="chip type">${t.icon} ${t.label}</span><span class="chip rar ${def.rarity}">${r.label}</span></div>
+      <div class="c-fun"><b>FUNFACT</b>${def.fact}</div>
+      <div class="c-foot"><span class="lvl">Lv.${n}</span><span class="rps">+${fmtRps(def.rps * n)} RP/s</span></div>
+    </div><div class="shine"></div></div>`;
+}
+
+/* ================= BINDER (dinamikus album) ================= */
+function layout(){
+  // a rendelkezésre álló szélességből számoljuk az oszlopok számát és a kártyaméretet
+  const w = window.innerWidth;
+  const mobile = w <= 640;
+  const mw = w > 900 ? Math.min(w, 1500) - 40 - 372 : w - 24;     // a jobb oldali panel szélessége
+  const avail = mw - (mobile ? 20 : 44) - (mobile ? 0 : 34) - (mobile ? 20 : 28);
+  let cols = 2, s = .6;
+  for (const c of [4, 3, 2]) {
+    cols = c;
+    s = Math.min(1, (avail - (c - 1) * 14) / (c * 200));
+    if (s >= .74) break;
+  }
+  s = Math.max(.5, +s.toFixed(3));
+  return { cols, ppv: 1, s, per: cols * 2 };
+}
+let lastLayoutKey = '';
+let lastPer = layout().per;
+
+function viewList(){
+  return CARDS.filter(c => (filter === 'all' || c.pack === filter) && (!ownedOnly || isSeen(c.id)));
+}
+
+function slotHTML(def){
+  const e = state.col[def.id];
+  const seen = !!(e && e.seen);
+  const n = e ? e.n : 0;
+  const evolved = seen && n === 0;
+  const pk = PACK_BY_ID[def.pack];
+  const evoBtn = canEvolve(def.id) ? `<button class="evoBtn" type="button" data-evolve="${def.id}">⚡ EVOLVE</button>` : '';
+  return `<div class="slot" data-id="${def.id}" data-seen="${seen ? 1 : 0}">
+    <div class="slotNum">#${String(def.no).padStart(3, '0')} · ${pk.icon}</div>
+    <div class="pocket ${seen ? 'owned' : ''} ${evolved ? 'evolved' : ''}">
+      ${cardHTML(def, n, !seen)}
+      ${seen ? `<span class="copies" title="Példányok">×${n}</span>` : ''}
+      ${evolved ? '<span class="ribbon">EVOLVÁLVA</span>' : ''}
+    </div>
+    <div class="slotCap">Kinyitva <b>${seen ? 1 : 0}/1</b></div>
+    ${evoBtn}
+  </div>`;
+}
+function pageHTML(list, p, per){
+  let slots = '';
+  for (let i = 0; i < per; i++) {
+    const def = list[p * per + i];
+    slots += def ? slotHTML(def)
+                 : `<div class="slot"><div class="slotNum">&nbsp;</div><div class="pocket emptyPocket"></div></div>`;
+  }
+  return `<div class="page"><div class="pageHead">Oldal ${p + 1}</div><div class="pocketGrid">${slots}</div></div>`;
+}
+const spineHTML = () => `<div class="spine"><i class="ring"></i><i class="ring"></i><i class="ring"></i></div>`;
+
+function renderFilters(){
+  const chips = [{id:'all', label:'Összes', icon:'📚', list:CARDS}]
+    .concat(PACKS.map(p => ({id:p.id, label:p.name, icon:p.icon, list:CARDS.filter(c => c.pack === p.id)})));
+  $('filters').innerHTML = chips.map(ch => {
+    const a = countSeen(ch.list), b = ch.list.length;
+    return `<button type="button" class="fchip ${filter === ch.id ? 'on' : ''} ${a === b ? 'done' : ''}" data-filter="${ch.id}">${ch.icon} ${ch.label} <b>${a}/${b}</b></button>`;
+  }).join('') + `<button type="button" class="fchip toggle ${ownedOnly ? 'on' : ''}" data-owned="1">👁 Csak megszerzett</button>`;
+}
+
+function renderBinder(opts = {}){
+  const L = layout();
+  const wrap = document.querySelector('.binderWrap');
+  wrap.style.setProperty('--s', L.s);
+  wrap.style.setProperty('--cols', L.cols);
+  if (L.per !== lastPer) { binderPage = Math.floor(binderPage * lastPer / L.per); lastPer = L.per; }
+
+  const list = viewList();
+  const pages = Math.max(1, Math.ceil(list.length / L.per));
+  const maxStart = Math.floor((pages - 1) / L.ppv) * L.ppv;
+  binderPage = Math.max(0, Math.min(Math.floor(binderPage / L.ppv) * L.ppv, maxStart));
+
+  let html;
+  if (!list.length) {
+    html = `<div class="emptyView">Még nincs megszerzett kártya ebben a gyűjteményben.<br>Nyiss csomagokat a bal oldali boltban!</div>`;
+  } else if (L.ppv === 2) {
+    html = pageHTML(list, binderPage, L.per) + spineHTML()
+         + (binderPage + 1 < pages ? pageHTML(list, binderPage + 1, L.per) : '');
+  } else {
+    html = spineHTML() + pageHTML(list, binderPage, L.per);
+  }
+  const turn = opts.turn ? ` turn-${opts.turn}` : '';
+  $('binder').innerHTML = `<div class="pages${turn}">${html}</div>`;
+
+  if (opts.flashIds) {
+    opts.flashIds.forEach(id => {
+      const el = $('binder').querySelector(`.slot[data-id="${id}"] .pocket`);
+      if (el) el.classList.add('flash');
+    });
+  }
+
+  // oldalválasztó
+  const sel = $('pgSel');
+  let o = '';
+  for (let p = 0; p < pages; p += L.ppv) {
+    const end = Math.min(p + L.ppv, pages);
+    o += `<option value="${p}" ${p === binderPage ? 'selected' : ''}>Oldal ${p + 1}${end > p + 1 ? '–' + end : ''} / ${pages}</option>`;
+  }
+  sel.innerHTML = o;
+  $('prevPg').disabled = binderPage <= 0;
+  $('nextPg').disabled = binderPage >= maxStart;
+
+  renderFilters();
+  $('foundCount').textContent = countSeen(CARDS);
+  $('totalCount').textContent = CARDS.length;
+}
+
+function goPage(delta){
+  const L = layout();
+  const pages = Math.max(1, Math.ceil(viewList().length / L.per));
+  const maxStart = Math.floor((pages - 1) / L.ppv) * L.ppv;
+  const ns = Math.max(0, Math.min(binderPage + delta * L.ppv, maxStart));
+  if (ns === binderPage) return;
+  binderPage = ns;
+  renderBinder({ turn: delta > 0 ? 'next' : 'prev' });
+}
+
+/* ================= UI ================= */
+let shopBtns = [], shopBars = [];
+
+function renderShop(){
+  $('packList').innerHTML = PACKS.map(p => {
+    const pool = POOL[p.id], got = countSeen(pool);
+    return `<div class="packRow" style="--pc1:${p.c1};--pc2:${p.c2}" data-pack="${p.id}">
+      <div class="packMini"><span>${p.icon}</span></div>
+      <div class="packBody">
+        <div class="pName">${p.name}</div>
+        <div class="pMeta">${p.count} lap • min. ${p.guarantee === 'ultra' ? 'Ultra' : 'Rare'} • <b>${got}/${pool.length}</b></div>
+        <div class="pDesc">${p.desc}</div>
+      </div>
+      <button class="buyBtn" type="button" data-buy="${p.id}"><span class="bp">${fmt(p.price)}</span> RP</button>
+      <div class="pbar"><i></i></div>
+    </div>`;
+  }).join('');
+  shopBtns = [...document.querySelectorAll('.buyBtn')];
+  shopBars = [...document.querySelectorAll('.pbar > i')];
+}
+
+function updateUI(){
+  $('rpDisplay').textContent = fmt(state.rp);
+  $('rpsDisplay').textContent = fmtRps(getRps());
+  $('packsCount').textContent = state.packs;
+  shopBtns.forEach((b, i) => { b.disabled = busy || state.rp < PACKS[i].price; });
+  shopBars.forEach((b, i) => { b.style.width = Math.min(100, state.rp / PACKS[i].price * 100) + '%'; });
+}
+
+let toastTimer;
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+/* ================= KERESÉS ================= */
+$('searchBtn').addEventListener('click', e => {
+  state.rp += 1;
+  state.clicks++;
+  const btn = $('searchBtn');
+  let x, y;
+  if (e && e.clientX) { x = e.clientX; y = e.clientY; }
+  else { const r = btn.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top + r.height / 3; }
+  const f = document.createElement('span');
+  f.className = 'floatTxt';
+  f.textContent = '+1 RP';
+  f.style.left = (x + (Math.random() * 40 - 20)) + 'px';
+  f.style.top = y + 'px';
+  document.body.appendChild(f);
+  setTimeout(() => f.remove(), 900);
+  updateUI();
+});
+
+/* ================= HÚZÁS ================= */
+function rollRarity(minIdx){
+  let total = 0;
+  const w = RAR_KEYS.map((k, i) => { const v = i >= minIdx ? RARITY[k].chance : 0; total += v; return v; });
+  let x = Math.random() * total;
+  for (let i = 0; i < w.length; i++) { x -= w[i]; if (x < 0) return RAR_KEYS[i]; }
+  return RAR_KEYS[RAR_KEYS.length - 1];
+}
+function pickFromPool(pool, rarity){
+  const start = RAR_KEYS.indexOf(rarity);
+  for (let i = start; i >= 0; i--) {              // ha nincs ilyen ritkaság, lejjebb lépünk
+    const c = pool.filter(x => x.rarity === RAR_KEYS[i]);
+    if (c.length) return c[Math.floor(Math.random() * c.length)];
+  }
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+function drawPack(pk){
+  const pool = POOL[pk.id];
+  const out = [];
+  for (let i = 0; i < pk.count; i++) out.push(pickFromPool(pool, rollRarity(0)));
+  const gi = RAR_KEYS.indexOf(pk.guarantee);
+  if (!out.some(c => RAR_KEYS.indexOf(c.rarity) >= gi)) {
+    out[out.length - 1] = pickFromPool(pool, rollRarity(gi));   // garantált találat
+  }
+  // növekvő ritkaság szerint: a legjobb lap kerül utoljára a kibontásnál
+  out.sort((a, b) => RAR_KEYS.indexOf(a.rarity) - RAR_KEYS.indexOf(b.rarity));
+  return out;
+}
+
+/* ================= CSOMAG KIBONTÁS ================= */
+let pend = null, flipTimer = null, flipped = false;
+const COLORS = {common:'#b8c0d4', rare:'#e8eef7', ultra:'#ffd34d', secret:'#ff9aff'};
+
+function openPack(pid){
+  const pk = PACK_BY_ID[pid];
+  if (busy || !pk || state.rp < pk.price) return;
+  busy = true;
+  state.rp -= pk.price;
+  state.packs++;
+
+  const cards = drawPack(pk).map(def => {
+    const e = state.col[def.id] || (state.col[def.id] = { n:0, seen:false });
+    const wasNew = !e.seen, prev = e.n;
+    e.n++; e.seen = true;
+    return { def, wasNew, prev, level: e.n };
+  });
+  pend = { pk, cards, idx:0, phase:'reveal' };
+  save();
+  updateUI();
+  showReveal();
+}
+
+function showReveal(){
+  const { pk, cards, idx } = pend;
+  const cur = cards[idx], def = cur.def;
+  const ov = $('overlay'), fl = $('flipper');
+  pend.phase = 'reveal';
+  $('sumGrid').style.display = 'none';
+  $('sumGrid').innerHTML = '';
+  $('stage').style.display = '';
+  ov.className = 'ov show rar-' + def.rarity;
+  $('packTitle').textContent = `${pk.icon} ${pk.name} – ${idx + 1} / ${cards.length}`;
+  fl.style.transition = 'none';
+  fl.classList.remove('flipped', 'shake');
+  void fl.offsetWidth;
+  fl.style.transition = '';
+  $('frontFace').innerHTML = cardHTML(def, cur.level, false);
+  fl.classList.add('shake');
+  $('resultText').textContent = '';
+  $('resultSub').textContent = '';
+  const last = idx === cards.length - 1;
+  $('nextBtn').disabled = true;
+  $('nextBtn').style.display = '';
+  $('nextBtn').textContent = last ? 'Összegzés ✔' : 'Következő ▶';
+  $('skipBtn').style.display = last ? 'none' : '';
+  $('closeBtn').style.display = 'none';
+  $('tapHint').textContent = 'Koppints a kártyára!';
+  flipped = false;
+  clearTimeout(flipTimer);
+  const delay = ({common:1000, rare:1250, ultra:1700, secret:2200})[def.rarity] * (idx === 0 ? 1.3 : 1);
+  flipTimer = setTimeout(flipCard, delay);
+}
+
+function flipCard(){
+  if (flipped || !pend || pend.phase !== 'reveal') return;
+  flipped = true;
+  clearTimeout(flipTimer);
+  const tok = pend.idx, cur = pend.cards[tok], def = cur.def;
+  const fl = $('flipper');
+  fl.classList.remove('shake');
+  void fl.offsetWidth;
+  fl.classList.add('flipped');
+  $('tapHint').textContent = '';
+  setTimeout(() => { if (pend && pend.idx === tok && pend.phase === 'reveal') $('overlay').classList.add('revealed'); }, 500);
+  setTimeout(() => {
+    if (!pend || pend.idx !== tok || pend.phase !== 'reveal') return;
+    const rt = $('resultText');
+    rt.style.color = COLORS[def.rarity];
+    rt.textContent = cur.wasNew ? '✨ ÚJ KÁRTYA!' : `⬆ SZINTLÉPÉS!  Lv.${cur.prev} → Lv.${cur.level}`;
+    if (def.evolvesTo) {
+      $('resultSub').textContent = cur.level >= EVO_COST ? '⚡ Az evolúció elérhető az albumban!'
+                                                         : `Példányok: ${cur.level} / ${EVO_COST} az evolúcióhoz`;
+    }
+    $('nextBtn').disabled = false;
+  }, 1000);
+}
+
+function nextCard(){
+  if (!pend || pend.phase !== 'reveal' || $('nextBtn').disabled) return;
+  if (pend.idx < pend.cards.length - 1) { pend.idx++; showReveal(); }
+  else showSummary();
+}
+
+function showSummary(){
+  if (!pend) return;
+  clearTimeout(flipTimer);
+  pend.phase = 'sum';
+  const { pk, cards } = pend;
+  const best = cards.reduce((a, c) => RAR_KEYS.indexOf(c.def.rarity) > RAR_KEYS.indexOf(a) ? c.def.rarity : a, 'common');
+  $('overlay').className = 'ov show revealed rar-' + best;
+  $('stage').style.display = 'none';
+  $('tapHint').textContent = '';
+  $('packTitle').textContent = `${pk.icon} ${pk.name} – a csomag tartalma`;
+  $('sumGrid').innerHTML = cards.map(c =>
+    `<div class="sumItem">${cardHTML(c.def, c.level, false)}
+      <span class="sumTag ${c.wasNew ? 'new' : 'up'}">${c.wasNew ? 'ÚJ!' : 'Lv.' + c.prev + '→' + c.level}</span></div>`).join('');
+  $('sumGrid').style.display = '';
+  const nn = cards.filter(c => c.wasNew).length, nu = cards.length - nn;
+  const rt = $('resultText');
+  rt.style.color = COLORS[best];
+  rt.textContent = `✨ ${nn} új kártya  •  ⬆ ${nu} szintlépés`;
+  const evo = [...new Set(cards.map(c => c.def.id))].filter(canEvolve).map(id => CARD_BY_ID[id].name);
+  $('resultSub').textContent = evo.length ? '⚡ Evolúció elérhető: ' + evo.join(', ') : '';
+  $('skipBtn').style.display = 'none';
+  $('nextBtn').style.display = 'none';
+  $('closeBtn').style.display = '';
+}
+
+function closeOverlay(){
+  if (!pend || pend.phase !== 'sum') return;
+  const ids = [...new Set(pend.cards.map(c => c.def.id))];
+  pend = null;
+  busy = false;
+  $('overlay').className = 'ov';
+  renderBinder({ flashIds: ids });
+  renderShop();
+  updateUI();
+  save();
+}
+
+/* ================= EVOLÚCIÓ ================= */
+let evoTimers = [], evoTarget = null;
+function evolve(id){
+  if (busy || !canEvolve(id)) return;
+  busy = true;
+  const from = CARD_BY_ID[id], to = CARD_BY_ID[from.evolvesTo];
+  const before = getRps();
+  state.col[id].n -= EVO_COST;
+  const te = state.col[to.id] || (state.col[to.id] = { n:0, seen:false });
+  te.n += 1; te.seen = true;
+  const after = getRps();
+  evoTarget = to.id;
+  save();
+  updateUI();
+  runEvolution(from, to, before, after, te.n);
+}
+
+function runEvolution(from, to, before, after, toLevel){
+  const ov = $('evoOv');
+  evoTimers.forEach(clearTimeout); evoTimers = [];
+  ov.className = 'ov show';
+  $('evoTitle').textContent = `Mi történik? ${from.name} evolválódik…`;
+  $('evoOld').innerHTML = cardHTML(from, EVO_COST, false);
+  $('evoOld').className = 'evoCard pulse';
+  $('evoNew').innerHTML = cardHTML(to, toLevel, false);
+  $('evoNew').className = 'evoCard hidden';
+  $('evoFlash').classList.remove('go');
+  $('evoResult').textContent = '';
+  $('evoResult').style.color = '';
+  $('evoSub').textContent = '';
+  $('evoClose').disabled = true;
+  const T = (fn, ms) => evoTimers.push(setTimeout(fn, ms));
+  T(() => $('evoFlash').classList.add('go'), 1900);
+  T(() => {
+    $('evoOld').className = 'evoCard hidden';
+    $('evoNew').className = 'evoCard appear';
+    ov.className = 'ov show revealed rar-' + to.rarity;
+    $('evoTitle').textContent = 'Az evolúció sikerült!';
+  }, 2400);
+  T(() => {
+    $('evoResult').style.color = '#ffe27a';
+    $('evoResult').textContent = `${from.name} → ${to.name}!`;
+    $('evoSub').textContent = `Termelés: ${fmtRps(before)} → ${fmtRps(after)} RP/s`;
+    $('evoClose').disabled = false;
+    renderBinder();
+    renderShop();
+    updateUI();
+  }, 3600);
+}
+
+function closeEvo(){
+  if ($('evoClose').disabled) return;
+  $('evoOv').className = 'ov';
+  busy = false;
+  renderBinder({ flashIds: evoTarget ? [evoTarget] : [] });
+  updateUI();
+  save();
+}
+
+/* ================= MODAL (kártya részletek) ================= */
+function openModal(id){
+  const def = CARD_BY_ID[id], e = state.col[id];
+  if (!def || !e || !e.seen) return;
+  modalId = id;
+  const n = e.n, r = RARITY[def.rarity], t = TYPES[def.type], pk = PACK_BY_ID[def.pack];
+  const from = def.from ? CARD_BY_ID[def.from] : null;
+  const to = def.evolvesTo ? CARD_BY_ID[def.evolvesTo] : null;
+
+  $('mbox').className = 'mbox rar-' + def.rarity;
+  $('mCardWrap').className = 'mcardWrap ' + def.rarity;
+  $('mCard').innerHTML = cardHTML(def, n, false);
+  $('mCard').style.setProperty('--rx', '0deg');
+  $('mCard').style.setProperty('--ry', '0deg');
+
+  const node = (d, cur) => `<div class="node ${cur ? 'cur' : ''}">${d.name}<small>${d.from ? 'STAGE 1' : 'BASIC'} • +${fmtRps(d.rps)} RP/s</small></div>`;
+  let evo;
+  if (to) {
+    const pips = Array.from({length:EVO_COST}, (_, i) => `<i class="pip ${i < Math.min(n, EVO_COST) ? 'on' : ''}"></i>`).join('');
+    const ok = n >= EVO_COST;
+    evo = `<div class="mSec"><h4>Evolúció</h4>
+      <div class="chain">${node(def, true)}<span class="arrowE">➜</span>${node(to, false)}</div>
+      <div class="pips">${pips}<span>${n} / ${EVO_COST} példány</span></div>
+      <button class="evoBtn big" type="button" data-m-evolve ${ok ? '' : 'disabled'}>⚡ EVOLVE</button>
+      ${ok ? '' : `<div class="mHint">Még ${EVO_COST - n} példány kell az evolúcióhoz.</div>`}
+      ${n === 0 ? '<div class="mHint">Ez a lény már evolválódott – a példányai felhasználásra kerültek.</div>' : ''}
+    </div>`;
+  } else if (from) {
+    evo = `<div class="mSec"><h4>Evolúció</h4>
+      <div class="chain">${node(from, false)}<span class="arrowE">➜</span>${node(def, true)}</div>
+      <div class="mHint">✔ Végső forma – evolúcióval jött létre (${EVO_COST} ${from.name} egyesítéséből).</div></div>`;
+  } else {
+    evo = `<div class="mSec"><h4>Evolúció</h4><div class="mHint">Ennek a lénynek nincs ismert evolúciója.</div></div>`;
+  }
+
+  $('mInfo').innerHTML = `
+    <h2>${def.name}</h2>
+    <div class="mSub">${def.sub} • ${def.from ? 'Stage 1' : 'Basic'}</div>
+    <div class="mChips">
+      <span class="chip type" style="color:#fff">${t.icon} ${t.label}</span>
+      <span class="chip rar ${def.rarity}">${r.label}</span>
+    </div>
+    <div class="mStats">
+      <div class="stat"><small>Szint (Level)</small><b>Lv.${n}</b></div>
+      <div class="stat"><small>Példányok</small><b>${n}</b></div>
+      <div class="stat"><small>Termelés / példány</small><b class="g">+${fmtRps(def.rps)} RP/s</b></div>
+      <div class="stat"><small>Összes termelés</small><b class="g">+${fmtRps(def.rps * n)} RP/s</b></div>
+      <div class="stat wide"><small>Csomag • album #${String(def.no).padStart(3, '0')}</small><b>${pk.icon} ${pk.name}</b></div>
+    </div>
+    ${evo}`;
+  $('mFact').innerHTML = `<div class="fl">📖 FUNFACT</div><p>${def.fact}</p>`;
+  $('modal').classList.add('show');
+}
+function closeModal(){ $('modal').classList.remove('show'); modalId = null; }
+
+/* ================= ESEMÉNYEK ================= */
+$('packList').addEventListener('click', e => {
+  const b = e.target.closest('[data-buy]');
+  if (b && !b.disabled) openPack(b.dataset.buy);
+});
+$('stage').addEventListener('click', flipCard);
+$('nextBtn').addEventListener('click', nextCard);
+$('skipBtn').addEventListener('click', showSummary);
+$('closeBtn').addEventListener('click', closeOverlay);
+$('evoClose').addEventListener('click', closeEvo);
+
+$('prevPg').addEventListener('click', () => goPage(-1));
+$('nextPg').addEventListener('click', () => goPage(1));
+$('pgSel').addEventListener('change', e => {
+  const v = parseInt(e.target.value, 10) || 0;
+  const dir = v > binderPage ? 'next' : 'prev';
+  binderPage = v;
+  renderBinder({ turn: dir });
+});
+$('filters').addEventListener('click', e => {
+  const f = e.target.closest('[data-filter]');
+  if (f) { filter = f.dataset.filter; binderPage = 0; renderBinder(); return; }
+  if (e.target.closest('[data-owned]')) { ownedOnly = !ownedOnly; binderPage = 0; renderBinder(); }
+});
+$('binder').addEventListener('click', e => {
+  const evoBtn = e.target.closest('[data-evolve]');
+  if (evoBtn) { evolve(evoBtn.dataset.evolve); return; }
+  const slot = e.target.closest('.slot[data-id]');
+  if (!slot) return;
+  const id = slot.dataset.id;
+  if (slot.dataset.seen === '1') openModal(id);
+  else {
+    const d = CARD_BY_ID[id], pk = PACK_BY_ID[d.pack];
+    toast(d.evoOnly ? 'Ezt a lényt evolúcióval szerezheted meg.' : `Ez a kártya még rejtély – keresd a(z) ${pk.icon} ${pk.name} csomagban!`);
+  }
+});
+
+$('mClose').addEventListener('click', closeModal);
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(); });
+$('mInfo').addEventListener('click', e => {
+  if (e.target.closest('[data-m-evolve]')) {
+    const id = modalId;
+    closeModal();
+    if (id) evolve(id);
+  }
+});
+const mWrap = $('mCardWrap');
+mWrap.addEventListener('mousemove', e => {
+  const r = mWrap.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+  $('mCard').style.setProperty('--ry', (x * 16) + 'deg');
+  $('mCard').style.setProperty('--rx', (-y * 16) + 'deg');
+});
+mWrap.addEventListener('mouseleave', () => {
+  $('mCard').style.setProperty('--rx', '0deg');
+  $('mCard').style.setProperty('--ry', '0deg');
+});
+
+document.addEventListener('keydown', e => {
+  if ($('modal').classList.contains('show')) { if (e.key === 'Escape') closeModal(); return; }
+  if ($('overlay').classList.contains('show') && pend) {
+    if (pend.phase === 'sum') { if (e.key === 'Escape' || e.key === 'Enter') closeOverlay(); }
+    else if (e.key === 'Enter') { flipped ? nextCard() : flipCard(); }
+    else if (e.key === 'Escape') showSummary();
+    return;
+  }
+  if ($('evoOv').classList.contains('show')) {
+    if (e.key === 'Escape' || e.key === 'Enter') closeEvo();
+    return;
+  }
+  if (e.key === 'ArrowLeft') goPage(-1);
+  if (e.key === 'ArrowRight') goPage(1);
+});
+
+$('resetBtn').addEventListener('click', () => {
+  if (confirm('Biztosan törölni szeretnéd az összes haladásodat?')) {
+    state = { rp:0, clicks:0, packs:0, col:{}, lastSave:Date.now() };
+    try { localStorage.removeItem(SAVE_KEY); OLD_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {}
+    binderPage = 0; filter = 'all'; ownedOnly = false;
+    renderBinder(); renderShop(); updateUI();
+    toast('Új kutatás kezdődött!');
+  }
+});
+
+let resizeT;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeT);
+  resizeT = setTimeout(() => {
+    const L = layout(), key = `${L.cols}|${L.ppv}|${L.s}`;
+    if (key !== lastLayoutKey) { lastLayoutKey = key; renderBinder(); }
+  }, 120);
+});
+
+/* ================= JÁTÉK CIKLUS ================= */
+function tick(){
+  const now = performance.now();
+  const dt = Math.min((now - lastTick) / 1000, 5);
+  lastTick = now;
+  const rps = getRps();
+  if (rps > 0) state.rp += rps * dt;
+  updateUI();
+}
+
+load();
+{ const L = layout(); lastLayoutKey = `${L.cols}|${L.ppv}|${L.s}`; }
+renderShop();
+renderBinder();
+updateUI();
+setInterval(tick, 100);
+setInterval(save, 5000);
+window.addEventListener('beforeunload', save);
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+
+})();
+</script>
+</body>
+</html>
